@@ -3,10 +3,12 @@ using UnityEngine;
 public class Dice_Scr : MonoBehaviour
 {
     private Outline outline;
+    public Player_Scr player;
 
     public int id = -1;
+    public int value = 0;
 
-    bool isLeft = false;
+    public bool isLeft = false;
 
 
 
@@ -20,22 +22,23 @@ public class Dice_Scr : MonoBehaviour
     {
         outline.enabled = !outline.enabled;
         isLeft = !isLeft;
+        player.OnDiceSelectChange();
     }
 
-    public int CheckDiceValue()
+    public int UpdateDiceValue()
     {
         if (transform.up == Vector3.up)
-            return 5;
+        { value = 5; return 5; }
         if (-transform.up == Vector3.up)
-            return 2;
+        { value = 2; return 2; }
         if (transform.right == Vector3.up)
-            return 4;
+        { value = 4; return 4; }
         if (-transform.right == Vector3.up)
-            return 3;
+        { value = 3; return 3; }
         if (transform.forward == Vector3.up)
-            return 1;
+        { value = 1; return 1; }
         if (-transform.forward == Vector3.up)
-            return 6;
-        return -1;
+        { value = 6; return 6; }
+        value = -1; return -1;
     }
 }
