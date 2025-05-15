@@ -9,7 +9,7 @@ public static class Extensions_Scr
         int[] result = new int[array.Length];
         while (i < array.Length && i < subArray.Length)
         {
-            array[i] -= subArray[i++];
+            result[i] = array[i] - subArray[i++];
         }
 
         return result;

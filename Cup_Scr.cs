@@ -22,7 +22,7 @@ public class Cup_Scr : MonoBehaviour
 
     private void OnMouseDown()
     {
-        if (state == CupState.empty)
+        if (state == CupState.empty && player.rerollAvailable)
             FillCup();
         if (state == CupState.overturned)
             ResetCup();

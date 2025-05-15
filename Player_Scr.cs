@@ -2,27 +2,47 @@ using System.Collections.Generic;
 using System.Linq;
 using DG.Tweening;
 using TMPro;
-using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.UI;
 using Sequence = DG.Tweening.Sequence;
 
 public class Player_Scr : MonoBehaviour
 {
-    [SerializeField] private List<Dice_Scr> diceSet = new(), diceSelected = new(), diceUnselected = new();
+    //References to other objects
     [SerializeField] private Cup_Scr cup;
     [SerializeField] private TMP_Text UI_Score;
+    [SerializeField] private TMP_Text UI_TurnScore;
+    [SerializeField] private Button UI_EndTurnBtn;
+    [SerializeField] private List<Dice_Scr> diceSet = new();
+
+    //Dice selection
+    private List<Dice_Scr> diceSelected = new(), diceToRoll = new();
     public int[] diceValues = new int[6] { 0, 0, 0, 0, 0, 0 };
     public List<int[]> diceCombos = new List<int[]>();
-    public int tempScore = 0;
-    [Space(10)]
-    public float radius = 1.5f;
-    public Vector2 regionSize = Vector2.one * 4.5f;
-    public int rejectionSamples = 30;
-    public float displayRadius = .75f;
-    List<Vector2> diceOffsets;
+
+    private int comboCount = 0;
+    private bool firstRoll = true;
+
+    //Score related
+    private int score = 0;
+    private int maxScore = 4000;
+    private int turnScore = 0;
+    private int tempScore = 0;
+    public bool combosExist = false;
+    public bool rerollAvailable = true;
+    private bool all6 = false;
+
+    //Poisson Disc Sampling variables
+    private float radius = 2.83f;
+    private Vector2 regionSize = Vector2.one * 8f;
+    private int rejectionSamples = 30;
+    //private float displayRadius = 1.4f;
+
 
     //TODO: прибраться
-
+    //TODO: конец хода, когда нет возможных комбо
+    //TODO: нельзя выбирать дайсы до первого броска
+    //TODO: писать ли скор, когда выбраны лишние дайсы?
 
     private void Start()
     {
@@ -32,131 +52,170 @@ public class Player_Scr : MonoBehaviour
             diceSet[i].player = this;
             diceSet[i].id = i;
         }
+        UI_EndTurnBtn.onClick.AddListener(EndTurnBtn);
+        UpdateScore();
+        UpdateTurnScore();
+    }
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            SetSpecialValues();
+        }
+
+    }
+    private void SetSpecialValues()
+    {
+        diceSet[0].transform.up = -Vector3.forward;
+        diceSet[1].transform.up = -Vector3.up;
+        diceSet[2].transform.up = Vector3.right;
+        diceSet[3].transform.up = -Vector3.right;
+        diceSet[4].transform.up = Vector3.up;
+        diceSet[5].transform.up = Vector3.up;
+        CalculateSelectedDices();
     }
 
 
+    #region Dice Movement
     public void MoveDicesToCup()
     {
-        diceUnselected = GetDiceSelected(false);
+        turnScore += tempScore;
+        all6 = CheckAll6();
+        if (firstRoll || all6)
+            { diceToRoll = diceSet;  firstRoll = false; }
+        else
+            diceToRoll = GetDiceSelected(false);
         cup.state = Cup_Scr.CupState.filling;
         int i = 0;
-        foreach (Dice_Scr dice in diceUnselected)
+        foreach (Dice_Scr dice in diceToRoll)
         {
             Sequence sequence = DOTween.Sequence(this);
             sequence.AppendInterval(i * 0.2f);
-            sequence.Append(dice.transform.DOJump(cup.transform.position + new Vector3(0, 9, 0), 3f, 1, 0.3f));
-            sequence.Append(dice.transform.DOMove(cup.transform.position + new Vector3(0, 1.5f, 0), 0.15f));
+            sequence.Append(dice.transform.DOJump(cup.transform.position + new Vector3(0, 9, 0), 3f, 1, 0.3f).SetEase(Ease.OutCirc));
+            sequence.Append(dice.transform.DOMove(cup.transform.position + new Vector3(0, 1.5f, 0), 0.1f).SetEase(Ease.InCirc));
             sequence.AppendCallback(() => { dice.transform.SetParent(cup.transform); });
-            if (i == diceUnselected.Count - 1)
+            if (i == diceToRoll.Count - 1)
                 sequence.AppendCallback(() => { cup.state = Cup_Scr.CupState.filled; });
             i++;
         }
-        MoveCombosToBack();
+        if (!all6)
+            MoveCombosToBack(); //TODO: не в конце хода и мб при перебросе
+        else
+            ResetAllDices();
     }
     public void DropDicesFromCup()
     {
         RollDices();
+
+        List<Vector2> diceOffsets;
         int tries = 10;
         do
         {
             diceOffsets = PoissonDiscSampling_Scr.GeneratePoints(radius, regionSize, rejectionSamples);
             tries--;
-        } while (diceOffsets.Count < diceUnselected.Count && tries > 0);
+        } while (diceOffsets.Count < diceToRoll.Count && tries > 0);
 
-        for (int i = 0; i < diceUnselected.Count; i++)
+        for (int i = 0; i < diceToRoll.Count; i++)
         {
-            Transform diceTrans = diceUnselected[i].transform;
+            Transform diceTrans = diceToRoll[i].transform;
             diceTrans.parent = null;
             Vector3 newPos = new Vector3(cup.transform.position.x, 1, cup.transform.position.z);
             newPos += new Vector3(diceOffsets[i].x - regionSize.x / 2, 0, diceOffsets[i].y - regionSize.y / 2);
             diceTrans.position = newPos;
         }
-    }
-    public void RollDices()
-    {
-        for (int i = 0; i < diceUnselected.Count; i++)
-            RollDice(diceUnselected[i].transform);
-        CalculateSelectedDices();
 
-        //diceOffsets = PoissonDiscSampling_Scr.GeneratePoints(radius, regionSize, rejectionSamples);
+        CheckCombosInActive();
+        if (!combosExist)
+            BreakStreakAndEndTurn();
     }
-    private void RollDice(Transform diceTrans)
+    private void MoveCombosToBack()
     {
-        diceTrans.up = diceTrans.GetRandomDirection();
-        diceTrans.RotateAround(diceTrans.position, Vector3.up, Random.Range(0f, 360f));
-        //Debug.Log(diceTrans.up, diceTrans.gameObject);
+        for (int i = 0; i < diceCombos.Count; i++)
+        {
+            List<Transform> comboTransforms = GetDiceCombo(diceCombos[i]);
+            MoveComboToBack(comboTransforms, comboCount++);
+        }
+        DisableSelectedDices();
     }
+    private void MoveComboToBack(List<Transform> diceTransforms, int comboNum)
+    {
+        float diceDist = 3f;
+        float comboStartX = ((diceTransforms.Count - 1) * diceDist) / -2;
+        float comboDist = -20f + (comboNum * diceDist * 1.5f);
+        for (int i = 0; i < diceTransforms.Count; i++)
+        {
+            Vector3 newPos = new Vector3(comboStartX, 1, comboDist);
+            comboStartX += diceDist;
+            diceTransforms[i].DOMove(newPos, 0.4f);
+        }
+    }
+    #endregion
 
+    #region Score Calcs
     private void CalculateSelectedDices()
     {
         tempScore = 0;
         diceSelected = GetDiceSelected(true);
-        GetDiceValues();
+        diceValues = GetDiceValues(diceSelected);
         diceCombos = new List<int[]>();
-        CheckForFlashes();
-        CheckForDuplicates();
-        UI_Score.text = tempScore.ToString();
+        CheckForFlashes(ref diceValues, diceCombos, true);
+        CheckForDuplicates(ref diceValues, diceCombos, true);
+        CheckCombosInSelected();
+        UpdateTurnScore();
     }
-    private List<Dice_Scr> GetDiceSelected(bool isSelected)
+    private int[] GetDiceValues(List<Dice_Scr> dices)
     {
-        List<Dice_Scr> ans = new List<Dice_Scr>();
-        foreach (Dice_Scr dice in diceSet)
+        int[] values = new int[6] { 0, 0, 0, 0, 0, 0 };
+        for (int i = 0; i < dices.Count; i++)
         {
-            if (dice.isLeft == isSelected)
-                ans.Add(dice);
+            values[dices[i].UpdateDiceValue() - 1]++;
         }
-
-        return ans;
+        return values;
     }
-    private void GetDiceValues()
-    {
-        diceValues = new int[6] { 0, 0, 0, 0, 0, 0 };
-        for (int i = 0; i < diceSelected.Count; i++)
-        {
-            diceValues[diceSelected[i].UpdateDiceValue() - 1]++;
-        }
-    }
-    private void CheckForFlashes()
+    private void CheckForFlashes(ref int[] values, List<int[]> combos, bool countScore)
     {
         int value = 0;
         int k = 0;
         bool firstFlash = false;
-        for (int i = 0; i < diceValues.Length; i++)
+        for (int i = 0; i < values.Length; i++)
         {
-            if ((i >= 1 && i <= 4) && diceValues[i] == 0)
+            if ((i >= 1 && i <= 4) && values[i] == 0)
                 return;
-            if (diceValues[i] >= 1)
+            if (values[i] >= 1)
                 k++;
             if (k + 2 < i)
                 return;
 
             if (k == 5 && i == 4)
-            { 
-                value = 500; 
-                diceValues.SubtractArray(new int[] { 1, 1, 1, 1, 1 }); 
-                diceCombos.Add(new int[6] { 1, 1, 1, 1, 1, 0 }); 
-                firstFlash = true; 
+            {
+                value = 500;
+                int[] combo = new int[6] { 1, 1, 1, 1, 1, 0 };
+                combos.Add(combo);
+                values = values.SubtractArray(combo);
+                firstFlash = true;
             }
             if (k == 5 && i == 5 && !firstFlash)
-            { 
-                value = 750; 
-                diceValues.SubtractArray(new int[] { 0, 1, 1, 1, 1, 1 });
-                diceCombos.Add(new int[6] { 0, 1, 1, 1, 1, 1 });
+            {
+                value = 750;
+                int[] combo = new int[6] { 0, 1, 1, 1, 1, 1 };
+                combos.Add(combo);
+                values = values.SubtractArray(combo);
             }
             if (k == 6)
-            { 
-                value = 1500; 
-                diceValues = new int[] { 0, 0, 0, 0, 0, 0 };
-                diceCombos.Clear(); diceCombos.Add(new int[6] { 1, 1, 1, 1, 1, 1 });
+            {
+                value = 1500;
+                int[] combo = new int[6] { 1, 1, 1, 1, 1, 1 };
+                combos.Add(combo);
+                values = values.SubtractArray(combo);
             }
         }
-        //Debug.Log("falsh - " + value);
-        tempScore += value;
+        if (countScore)
+            tempScore += value;
     }
-    private void CheckForDuplicates()
+    private void CheckForDuplicates(ref int[] values, List<int[]> combos, bool countScore)
     {
         int value = 0;
-        for (int dice = 0; dice < diceValues.Length; dice++)
+        for (int dice = 0; dice < values.Length; dice++)
         {
             int baseValue = GetDiceBaseScore(dice);
             int temp = 0;
@@ -168,7 +227,7 @@ public class Player_Scr : MonoBehaviour
                 dicesCount = 3;
             while (dicesCount <= 6)
             {
-                if (diceValues[dice] < dicesCount)
+                if (values[dice] < dicesCount)
                     break;
                 if (dicesCount <= 2)
                     temp = dicesCount * baseValue * 10;
@@ -180,13 +239,14 @@ public class Player_Scr : MonoBehaviour
             if (temp != 0)
             {
                 int[] diceCombo = new int[] { 0, 0, 0, 0, 0, 0 };
-                diceCombo[dice] = diceValues[dice];
-                diceCombos.Add(diceCombo);
+                diceCombo[dice] = values[dice];
+                values.SubtractArray(diceCombo);
+                combos.Add(diceCombo);
             }
             value += temp;
         }
-
-        tempScore += value;
+        if (countScore)
+            tempScore += value;
     }
     private int GetDiceBaseScore(int num)
     {
@@ -201,18 +261,57 @@ public class Player_Scr : MonoBehaviour
             default: return 0;
         }
     }
+    private void CheckCombosInSelected()
+    {
+        int dicesNumInCombos = 0;
+        foreach (int[] diceCombo in diceCombos)
+            foreach (int dice in diceCombo) 
+                dicesNumInCombos += dice;
 
-    private void MoveCombosToBack()
-    {
-        for (int i = 0; i < diceCombos.Count; i++)
-        {
-            List<Transform> comboTransforms = GetDiceCombo(diceCombos[i]);
-            MoveComboToBack(comboTransforms, i);
-        }
+        bool allDicesUsed = dicesNumInCombos == diceSelected.Count ? true : false;
+        rerollAvailable = (diceCombos.Count > 0 && allDicesUsed) ? true : false;
     }
-    private void DisableDices()
+    private void CheckCombosInActive()
     {
-        //TODO: отключать подсветку дайсов, убирать возможность их использовать до следующего круга/раунда
+        List<Dice_Scr> activeDices = GetDiceActive();
+        int[] values = GetDiceValues(activeDices);
+        List<int[]> availableCombos = new List<int[]>();
+        CheckForFlashes(ref values, availableCombos, false);
+        CheckForDuplicates(ref values, availableCombos, false);
+        combosExist = availableCombos.Count > 0 ? true : false;
+    }
+    private bool CheckAll6() //TODO: мб надо где-то обнулять all6
+    {
+        if (diceSelected.Count != GetDiceActive().Count)
+            return false;
+        if (rerollAvailable)
+            return true;
+        return false;
+    }
+    #endregion
+
+    #region Dice Selection
+    private List<Dice_Scr> GetDiceSelected(bool isSelected)
+    {
+        List<Dice_Scr> ans = new List<Dice_Scr>();
+        foreach (Dice_Scr dice in diceSet)
+        {
+            if (dice.isLeft == isSelected && dice.isActive == true)
+                ans.Add(dice);
+        }
+
+        return ans;
+    }
+    private List<Dice_Scr> GetDiceActive()
+    {
+        List<Dice_Scr> ans = new List<Dice_Scr>();
+        foreach (Dice_Scr dice in diceSet)
+        {
+            if (dice.isActive)
+                ans.Add(dice);
+        }
+
+        return ans;
     }
     private List<Transform> GetDiceCombo(int[] diceCombo)
     {
@@ -223,11 +322,6 @@ public class Player_Scr : MonoBehaviour
         {
             while (diceCombo[i] > 0)
             {
-                /*foreach (Dice_Scr dice in diceSetCopy)
-                {
-                    if (dice.value == i + 1)
-                    { ans.Add(dice.transform); break; }
-                }*/
                 for (int j = diceSetCopy.Count - 1; j >= 0; j--)
                 {
                     if (diceSetCopy[j].value == i + 1)
@@ -240,23 +334,120 @@ public class Player_Scr : MonoBehaviour
 
         return ans;
     }
-    private void MoveComboToBack(List<Transform> diceTransforms, int comboNum)
+    #endregion
+
+    #region Dice Things
+    public void RollDices()
     {
-        float diceDist = 3f;
-        float comboStartX = ((diceTransforms.Count - 1) * diceDist) / -2;
-        float comboDist = -20f + (comboNum * diceDist * 1.5f);
-        for (int i = 0; i < diceTransforms.Count; i++)
+        for (int i = 0; i < diceToRoll.Count; i++)
+            RollDice(diceToRoll[i].transform);
+        CalculateSelectedDices();
+    }
+    private void RollDice(Transform diceTrans)
+    {
+        diceTrans.up = diceTrans.GetRandomDirection();
+        diceTrans.RotateAround(diceTrans.position, Vector3.up, Random.Range(0f, 360f));
+        //Debug.Log(diceTrans.up, diceTrans.gameObject);
+    }
+    private void DisableSelectedDices()
+    {
+        foreach (Dice_Scr dice in diceSelected)
         {
-            Vector3 newPos = new Vector3(comboStartX, 1, comboDist);
-            comboStartX += diceDist;
-            diceTransforms[i].DOMove(newPos, 0.4f);
+            dice.ChangeSelected();
+            dice.isActive = false;
+        }
+        OnDiceSelectChange();
+    }
+    private void ResetAllDices()
+    {
+        foreach (Dice_Scr dice in diceSet)
+        {
+            dice.ResetDie();
         }
     }
+    #endregion
 
     public void OnDiceSelectChange()
     {
         CalculateSelectedDices();
     }
+
+    #region UI Thingies
+    private void UpdateTurnScore()
+    {
+        if (turnScore + tempScore == 0)
+        { UI_TurnScore.text = ""; return; }
+
+        int textSize = 50 + Mathf.Max(0, (turnScore + tempScore - 500) / 200);
+        UI_TurnScore.text = "+ " + (turnScore + tempScore).ToString();
+        UI_TurnScore.fontSize = textSize;
+    }
+    private void UpdateScore()
+    {
+        UI_Score.text = score.ToString() + " / " + maxScore.ToString();
+    }
+    private void AddTurnScore() //TODO: возможно надо изменить порядок вызова функций в callback
+    {
+        score += turnScore + tempScore;
+        turnScore = 0;
+        tempScore = 0;
+        Sequence sequence = DOTween.Sequence();
+        Vector3 textStartPos = UI_TurnScore.rectTransform.position;
+
+        sequence.Append(UI_TurnScore.rectTransform.DOMove(textStartPos + new Vector3(0, -30, 0), 0.3f).SetEase(Ease.OutCirc));
+        sequence.Append(UI_TurnScore.rectTransform.DOMove(UI_Score.rectTransform.position, 0.3f).SetEase(Ease.InCirc));
+        sequence.Insert(0.3f, DOTween.To(() => UI_TurnScore.color, x => UI_TurnScore.color = x, new Color(1, 1, 1, 0), 0.3f));
+        sequence.AppendCallback(() => {
+            UI_TurnScore.color = Color.white;
+            UI_TurnScore.rectTransform.position = textStartPos;
+            UpdateScore();
+            UpdateTurnScore();
+        });
+    }
+    private void DropScore()
+    {
+        turnScore = 0;
+        tempScore = 0;
+
+        Sequence sequence = DOTween.Sequence();
+        Vector3 textStartPos = UI_TurnScore.rectTransform.position;
+
+        sequence.Append(UI_TurnScore.DOColor(Color.red, 0.3f));
+        sequence.Append(DOTween.To(() => UI_TurnScore.color, x => UI_TurnScore.color = x, new Color(1, 1, 1, 0), 0.3f));
+        sequence.Insert(0.3f, UI_TurnScore.rectTransform.DOMove(textStartPos + new Vector3(0, -50, 0), 0.3f).SetEase(Ease.InQuart));
+        sequence.AppendCallback(() => {
+            UI_TurnScore.color = Color.white;
+            UI_TurnScore.rectTransform.position = textStartPos;
+            UpdateTurnScore();
+        });
+    }
+    private void EndTurnBtn() //TODO разделить на несколько методов
+    {
+        if (!rerollAvailable)
+            return;
+
+        ResetValues();
+        AddTurnScore();
+    }
+    private void ResetValues()
+    {
+        comboCount = 0;
+
+        diceSelected = new();
+        diceToRoll = new();
+        diceCombos = new();
+
+        firstRoll = true;
+        rerollAvailable = true; // TODO: поменять когда добавлю StartTurn()?
+
+        ResetAllDices();
+    }
+    private void BreakStreakAndEndTurn()
+    {
+        ResetValues();
+        DropScore();
+    }
+    #endregion
 
     /*void OnDrawGizmos()
     {

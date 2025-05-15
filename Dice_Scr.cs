@@ -8,7 +8,7 @@ public class Dice_Scr : MonoBehaviour
     public int id = -1;
     public int value = 0;
 
-    public bool isLeft = false;
+    public bool isLeft = false, isActive = true;
 
 
 
@@ -20,9 +20,21 @@ public class Dice_Scr : MonoBehaviour
 
     private void OnMouseDown()
     {
+        ChangeSelected();
+        player.OnDiceSelectChange();
+    }
+
+    public void ChangeSelected()
+    {
+        if (!isActive) return;
         outline.enabled = !outline.enabled;
         isLeft = !isLeft;
-        player.OnDiceSelectChange();
+    }
+    public void ResetDie()
+    {
+        isActive = true;
+        isLeft = false;
+        outline.enabled = false;
     }
 
     public int UpdateDiceValue()
