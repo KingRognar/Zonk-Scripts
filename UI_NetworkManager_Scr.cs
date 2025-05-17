@@ -2,14 +2,30 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class UI_NetworkManager_Scr : MonoBehaviour
+public class UI_NetworkManager_Scr : NetworkBehaviour
 {
     [SerializeField] private Button hostBtn;
     [SerializeField] private Button clientBtn;
+    [SerializeField] private GameObject GMPrefab;
 
     private void Awake()
     {
-        hostBtn.onClick.AddListener(() => { NetworkManager.Singleton.StartHost(); });
-        clientBtn.onClick.AddListener(() => {NetworkManager.Singleton.StartClient(); });
+        hostBtn.onClick.AddListener(StartHost);
+        clientBtn.onClick.AddListener(StartClient);
+    }
+
+    private void StartHost()
+    {
+        if (!NetworkManager.Singleton.StartHost())
+            return;
+        Instantiate(GMPrefab, Vector3.zero, Quaternion.identity);
+        //GameManager_Scr.instance.SpawnNewPlayer();
+    }
+    private void StartClient()
+    {
+        if (!NetworkManager.Singleton.StartClient())
+            return;
+
+        //GameManager_Scr.instance.SpawnNewPlayer();
     }
 }

@@ -60,7 +60,7 @@ public class Player_Scr : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            SetSpecialValues();
+            //SetSpecialValues();
         }
 
     }
@@ -448,6 +448,12 @@ public class Player_Scr : MonoBehaviour
         DropScore();
     }
     #endregion
+
+    public void SetupPlayer(Cup_Scr newCup, List<Dice_Scr> newDices)
+    {
+        cup = newCup;
+        diceSet = newDices;
+    }
 
     /*void OnDrawGizmos()
     {
