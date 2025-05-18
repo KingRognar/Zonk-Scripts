@@ -14,39 +14,44 @@ public class GameManager_Scr : NetworkBehaviour
     [SerializeField] private List<Player_Scr> listOfPlayers = new();
     private NetworkVariable<int> numberOfPlayers = new NetworkVariable<int>(0);
 
+    [SerializeField] private NetworkManager netMan;
+
     private List<Vector3> spawnPositions = new() {
         new Vector3 (0,0,-30), new Vector3 (0,0,30), new Vector3 (30,0,0), new Vector3(-30,0,0)};
 
-    private void Awake()
+    private void Start()
     {
-        if (instance == null)
-            instance = this;
-        else
-            Destroy(gameObject);
-    }
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            SpawnNewPlayer();
-        }
-
+        netMan = NetworkManager.Singleton;
+        netMan.OnClientConnectedCallback += Middlenman;
     }
 
-    public void SpawnNewPlayer()
+    public override void OnNetworkSpawn()
     {
+        base.OnNetworkSpawn();
+
+        Debug.Log("тут1");
+    }
+
+
+    public void Middlenman(ulong clientId)
+    {
+        Debug.Log("тут2");
+        SpawnNewPlayerServerRpc(clientId);
+    }
+    [ServerRpc]
+    public void SpawnNewPlayerServerRpc(ulong clientId)
+    {
+        int id = (int)clientId;
         //TODO: защиту нада
-        if (numberOfPlayers.Value >= 4)
+        if (id >= 4)
         { Debug.Log("Попытка превысить макс кол-во игроков"); return; } 
 
 
-        Vector3 spawnPos = spawnPositions[numberOfPlayers.Value];
+        Vector3 spawnPos = spawnPositions[id];
         Quaternion spawnQuat = Quaternion.LookRotation(-spawnPos, Vector3.up);
         Player_Scr newPlayer = Instantiate(playerPref, spawnPos, spawnQuat).GetComponent<Player_Scr>();
         newPlayer.GetComponent<NetworkObject>().Spawn(true);
         listOfPlayers.Add(newPlayer);
-        if (IsSpawned)
-            numberOfPlayers.Value++;
 
         Cup_Scr newCup = SpawnCup(spawnPos);
         List<Dice_Scr> newDices = SpawnDices(spawnPos);
@@ -89,11 +94,4 @@ public class GameManager_Scr : NetworkBehaviour
 
         return dices;
     }
-
-    public virtual void OnStartClient()
-    {
-        //NewPlayerServerRpc();
-    }
-
-
 }

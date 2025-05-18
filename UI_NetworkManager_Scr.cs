@@ -18,7 +18,8 @@ public class UI_NetworkManager_Scr : NetworkBehaviour
     {
         if (!NetworkManager.Singleton.StartHost())
             return;
-        Instantiate(GMPrefab, Vector3.zero, Quaternion.identity);
+        //GameObject gm = Instantiate(GMPrefab, Vector3.zero, Quaternion.identity);
+        //gm.GetComponent<NetworkObject>().Spawn();
         //GameManager_Scr.instance.SpawnNewPlayer();
     }
     private void StartClient()

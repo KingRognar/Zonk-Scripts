@@ -21,7 +21,7 @@ public class NetworkManager_Scr : MonoBehaviour
 
     private void AddNewPlayer(ulong clientId)
     {
-        NewPlayerServerRpc(clientId);
+        //NewPlayerServerRpc(clientId);
     }
     [ServerRpc]
     private void NewPlayerServerRpc(ulong clientId)
