@@ -1,7 +1,10 @@
 using System.Collections.Generic;
 using NUnit.Framework;
+using TMPro;
 using Unity.Netcode;
+using UnityEditor.PackageManager;
 using UnityEngine;
+using UnityEngine.UI;
 using static Unity.Burst.Intrinsics.X86.Avx;
 
 public class GameManager_Scr : NetworkBehaviour
@@ -13,8 +16,13 @@ public class GameManager_Scr : NetworkBehaviour
     [SerializeField] private GameObject DicePref;
     [SerializeField] private List<Player_Scr> listOfPlayers = new();
     private NetworkVariable<int> numberOfPlayers = new NetworkVariable<int>(0);
+    [Space(10)]
+    private Transform canvasTrans;
+    [SerializeField] private GameObject scorePref;
+    [SerializeField] private GameObject turnScorePref;
+    [SerializeField] private GameObject endBtnPref;
 
-    [SerializeField] private NetworkManager netMan;
+    private NetworkManager netMan;
 
     private List<Vector3> spawnPositions = new() {
         new Vector3 (0,0,-30), new Vector3 (0,0,30), new Vector3 (30,0,0), new Vector3(-30,0,0)};
@@ -55,8 +63,20 @@ public class GameManager_Scr : NetworkBehaviour
 
         Cup_Scr newCup = SpawnCup(spawnPos);
         List<Dice_Scr> newDices = SpawnDices(spawnPos);
+        canvasTrans = GameObject.Find("Canvas").transform;
         newPlayer.SetupPlayer(newCup, newDices);
+        newPlayer.Initialize();
+        SetupCameraClientRpc(clientId);
     }
+    [ClientRpc]
+    private void SetupCameraClientRpc(ulong clientID)
+    {
+        if (OwnerClientId != clientID)
+            return;
+        Camera.main.tag = "Untagged";
+        Player_Scr.players[(int)clientID].transform.GetChild(0).tag = "MainCamera";
+    }
+
     private Cup_Scr SpawnCup(Vector3 playerPos)
     {
         Vector3 vectorA = -playerPos.normalized;

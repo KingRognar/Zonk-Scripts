@@ -2,15 +2,16 @@ using System.Collections.Generic;
 using System.Linq;
 using DG.Tweening;
 using TMPro;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 using Sequence = DG.Tweening.Sequence;
 
-public class Player_Scr : MonoBehaviour
+public class Player_Scr : NetworkBehaviour
 {
     //References to other objects
     [SerializeField] private Cup_Scr cup;
-    [SerializeField] private TMP_Text UI_Score;
+    [SerializeField] private TMP_Text UI_Score; //TODO: склеить в один объект
     [SerializeField] private TMP_Text UI_TurnScore;
     [SerializeField] private Button UI_EndTurnBtn;
     [SerializeField] private List<Dice_Scr> diceSet = new();
@@ -38,13 +39,14 @@ public class Player_Scr : MonoBehaviour
     private int rejectionSamples = 30;
     //private float displayRadius = 1.4f;
 
+    public static List<Player_Scr> players = new();
 
     //TODO: прибраться
     //TODO: конец хода, когда нет возможных комбо
     //TODO: нельзя выбирать дайсы до первого броска
     //TODO: писать ли скор, когда выбраны лишние дайсы?
 
-    private void Start()
+    public void Initialize()
     {
         cup.player = this;
         for (int i = 0; i < diceSet.Count; i++)
@@ -56,6 +58,12 @@ public class Player_Scr : MonoBehaviour
         UpdateScore();
         UpdateTurnScore();
     }
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+        players.Add(this);
+    }
+
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.Space))
@@ -453,6 +461,11 @@ public class Player_Scr : MonoBehaviour
     {
         cup = newCup;
         diceSet = newDices;
+        Transform canvasTrans = GameObject.Find("Canvas").transform;
+        canvasTrans.GetChild(1).gameObject.SetActive(true);
+        UI_Score = canvasTrans.GetChild(1).GetChild(1).GetComponent<TMP_Text>();
+        UI_TurnScore = canvasTrans.GetChild(1).GetChild(2).GetComponent<TMP_Text>();
+        UI_EndTurnBtn = canvasTrans.GetChild(1).GetChild(0).GetComponent<Button>();
     }
 
     /*void OnDrawGizmos()
