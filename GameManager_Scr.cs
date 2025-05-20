@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using NUnit.Framework;
 using TMPro;
 using Unity.Netcode;
-using UnityEditor.PackageManager;
 using UnityEngine;
 using UnityEngine.UI;
 using static Unity.Burst.Intrinsics.X86.Avx;
@@ -12,8 +11,8 @@ public class GameManager_Scr : NetworkBehaviour
     public static GameManager_Scr instance;
 
     [SerializeField] private GameObject playerPref;
-    [SerializeField] private GameObject CupPref;
-    [SerializeField] private GameObject DicePref;
+    [SerializeField] private GameObject cupPref;
+    [SerializeField] private GameObject dicePref;
     [SerializeField] private List<Player_Scr> listOfPlayers = new();
     private NetworkVariable<int> numberOfPlayers = new NetworkVariable<int>(0);
     [Space(10)]
@@ -23,6 +22,10 @@ public class GameManager_Scr : NetworkBehaviour
     [SerializeField] private GameObject endBtnPref;
 
     private NetworkManager netMan;
+
+    //TODO: прибраться 
+    //TODO: передача хода
+
 
     private List<Vector3> spawnPositions = new() {
         new Vector3 (0,0,-30), new Vector3 (0,0,30), new Vector3 (30,0,0), new Vector3(-30,0,0)};
@@ -44,6 +47,7 @@ public class GameManager_Scr : NetworkBehaviour
     public void Middlenman(ulong clientId)
     {
         Debug.Log("тут2");
+        if (!IsHost) return;
         SpawnNewPlayerServerRpc(clientId);
     }
     [ServerRpc]
@@ -56,47 +60,54 @@ public class GameManager_Scr : NetworkBehaviour
 
 
         Vector3 spawnPos = spawnPositions[id];
-        Quaternion spawnQuat = Quaternion.LookRotation(-spawnPos, Vector3.up);
-        Player_Scr newPlayer = Instantiate(playerPref, spawnPos, spawnQuat).GetComponent<Player_Scr>();
-        newPlayer.GetComponent<NetworkObject>().Spawn(true);
-        listOfPlayers.Add(newPlayer);
+        Player_Scr newPlayer = Instantiate(playerPref, spawnPos, Quaternion.identity).GetComponent<Player_Scr>();
+        newPlayer.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
 
-        Cup_Scr newCup = SpawnCup(spawnPos);
-        List<Dice_Scr> newDices = SpawnDices(spawnPos);
-        canvasTrans = GameObject.Find("Canvas").transform;
-        newPlayer.SetupPlayer(newCup, newDices);
-        newPlayer.Initialize();
-        SetupCameraClientRpc(clientId);
-    }
-    [ClientRpc]
-    private void SetupCameraClientRpc(ulong clientID)
-    {
-        if (OwnerClientId != clientID)
-            return;
-        Camera.main.tag = "Untagged";
-        Player_Scr.players[(int)clientID].transform.GetChild(0).tag = "MainCamera";
-    }
+        GameObject cupObj = Instantiate(cupPref, transform.position, Quaternion.identity);
+        Cup_Scr cupScr = cupObj.GetComponent<Cup_Scr>();
+        cupObj.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
+        cupObj.transform.parent = newPlayer.transform;
 
-    private Cup_Scr SpawnCup(Vector3 playerPos)
+        List<Dice_Scr> dicesScr = new();
+        for (int i = 0; i < 6; i++)
+        {
+            GameObject diceObj = Instantiate(dicePref, transform.position, Quaternion.identity);
+            dicesScr.Add(diceObj.GetComponent<Dice_Scr>());
+            diceObj.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
+            diceObj.transform.parent = newPlayer.transform;
+        }
+
+        CreateBackRefs(newPlayer, cupScr, dicesScr);
+        SetInitialPositions(newPlayer, cupScr, dicesScr);
+    }
+    private void CreateBackRefs(Player_Scr player, Cup_Scr cup, List<Dice_Scr> dices)
     {
-        Vector3 vectorA = -playerPos.normalized;
+        player.cup = cup;
+        player.diceSet = dices;
+
+        cup.player = player;
+
+        for (int i = 0; i < dices.Count; i++)
+        {
+            dices[i].player = player;
+            dices[i].id = i;
+        }
+    }
+    private void SetInitialPositions(Player_Scr player, Cup_Scr cup, List<Dice_Scr> dices)
+    {
+        //CUP
+        Vector3 vectorA = -player.transform.position.normalized;
         Vector3 vectorB = Vector3.up;
-        Vector3 spawnPos = Vector3.Cross(vectorA, vectorB) * 10f;
+        Vector3 posOffset = Vector3.Cross(vectorA, vectorB) * 10f;
 
-        GameObject cup = Instantiate(CupPref, playerPos + spawnPos, Quaternion.identity);
-        cup.GetComponent<NetworkObject>().Spawn(true);
-        return cup.GetComponent<Cup_Scr>();
-    }
-    private List<Dice_Scr> SpawnDices(Vector3 playerPos)
-    {
-        List<Dice_Scr> dices = new();
-        Vector3 vectorA = -playerPos.normalized;
-        Vector3 vectorB = -Vector3.up;
-        Vector3 spawnPos = Vector3.Cross(vectorA, vectorB) * 10f;
+        cup.transform.position = player.transform.position + posOffset;
 
+        //DICES
+        posOffset = -posOffset;
         Vector2 regionSize = Vector2.one * 8f;
         List<Vector2> diceOffsets;
         int tries = 10;
+
         do
         {
             diceOffsets = PoissonDiscSampling_Scr.GeneratePoints(2.83f, regionSize, 30);
@@ -104,14 +115,12 @@ public class GameManager_Scr : NetworkBehaviour
 
         for (int i = 0; i < 6; i++)
         {
-            Vector3 dicePos = spawnPos + new Vector3(0, 1, 0);
+            Vector3 dicePos = posOffset + new Vector3(0, 1, 0);
             dicePos += new Vector3(diceOffsets[i].x - regionSize.x / 2, 0, diceOffsets[i].y - regionSize.y / 2);
-            Dice_Scr dice = Instantiate(DicePref, playerPos + dicePos, Quaternion.identity).GetComponent<Dice_Scr>();
-            dice.GetComponent<NetworkObject>().Spawn(true);
 
-            dices.Add(dice);
+            dices[i].transform.position = player.transform.position + dicePos;
+            player.RollDice(dices[i].transform);
         }
-
-        return dices;
     }
+
 }

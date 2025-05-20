@@ -3,18 +3,23 @@ using System.Linq;
 using DG.Tweening;
 using TMPro;
 using Unity.Netcode;
+using UnityEditor.PackageManager;
 using UnityEngine;
 using UnityEngine.UI;
 using Sequence = DG.Tweening.Sequence;
 
 public class Player_Scr : NetworkBehaviour
 {
+    //Prefabs
+    [SerializeField] private GameObject cupPref;
+    [SerializeField] private GameObject dicePref;
+
     //References to other objects
-    [SerializeField] private Cup_Scr cup;
+    [SerializeField] public Cup_Scr cup;
     [SerializeField] private TMP_Text UI_Score; //TODO: склеить в один объект
     [SerializeField] private TMP_Text UI_TurnScore;
     [SerializeField] private Button UI_EndTurnBtn;
-    [SerializeField] private List<Dice_Scr> diceSet = new();
+    [SerializeField] public List<Dice_Scr> diceSet = new();
 
     //Dice selection
     private List<Dice_Scr> diceSelected = new(), diceToRoll = new();
@@ -39,31 +44,19 @@ public class Player_Scr : NetworkBehaviour
     private int rejectionSamples = 30;
     //private float displayRadius = 1.4f;
 
-    public static List<Player_Scr> players = new();
-
     //TODO: прибратьс€
-    //TODO: конец хода, когда нет возможных комбо
     //TODO: нельз€ выбирать дайсы до первого броска
     //TODO: писать ли скор, когда выбраны лишние дайсы?
+    //TODO: очки по какой-то причине не начисл€ютс€
 
-    public void Initialize()
-    {
-        cup.player = this;
-        for (int i = 0; i < diceSet.Count; i++)
-        {
-            diceSet[i].player = this;
-            diceSet[i].id = i;
-        }
-        UI_EndTurnBtn.onClick.AddListener(EndTurnBtn);
-        UpdateScore();
-        UpdateTurnScore();
-    }
-    public override void OnNetworkSpawn()
-    {
-        base.OnNetworkSpawn();
-        players.Add(this);
-    }
 
+
+
+
+    private void Start()
+    {
+        Initialize();
+    }
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.Space))
@@ -83,6 +76,94 @@ public class Player_Scr : NetworkBehaviour
         CalculateSelectedDices();
     }
 
+
+    #region Init
+    public void Initialize()
+    {
+        SetupCamera();
+        SetupUI();
+        //SetupCupAndDices();
+        //SetInitialPositions();
+
+        UpdateScore();
+        UpdateTurnScore();
+    }
+    private void SetupUI()
+    {
+        Transform canvasTrans = GameObject.Find("Canvas").transform;
+        canvasTrans.GetChild(1).gameObject.SetActive(true);
+
+        UI_Score = canvasTrans.GetChild(1).GetChild(1).GetComponent<TMP_Text>();
+        UI_TurnScore = canvasTrans.GetChild(1).GetChild(2).GetComponent<TMP_Text>();
+        UI_EndTurnBtn = canvasTrans.GetChild(1).GetChild(0).GetComponent<Button>();
+
+        UI_EndTurnBtn.onClick.AddListener(EndTurnBtn);
+    }
+    private void SetupCamera()
+    {
+        if (!IsOwner)
+            return;
+
+        Vector3 camPos = transform.position.normalized * 50;
+        camPos += new Vector3(0, 20, 0);
+        Transform newCamTrans = Instantiate(Camera.main, camPos, Quaternion.identity).transform;
+        newCamTrans.rotation *= Quaternion.LookRotation(-transform.position, Vector3.up);
+        newCamTrans.rotation *= Quaternion.Euler(20, 0, 0);
+
+        Camera.main.gameObject.SetActive(false);
+        Camera.main.tag = "Untagged";
+        newCamTrans.tag = "MainCamera";
+    }
+    private void SetupCupAndDices()
+    {
+        if (!IsOwner)
+            return;
+
+        cup = transform.GetChild(0).GetComponent<Cup_Scr>();
+        cup.player = this;
+
+        diceSet = new();
+        for (int i = 0; i < 6; i++)
+        {
+            diceSet.Add(transform.GetChild(i + 1).GetComponent<Dice_Scr>());
+
+            diceSet[i].player = this;
+            diceSet[i].id = i;
+        }
+    }
+    private void SetInitialPositions()
+    {
+        if (!IsOwner)
+            return;
+
+        //CUP
+        Vector3 vectorA = -transform.position.normalized;
+        Vector3 vectorB = Vector3.up;
+        Vector3 posOffset = Vector3.Cross(vectorA, vectorB) * 10f;
+
+        cup.transform.position = transform.position + posOffset;
+
+        //DICES
+        posOffset = -posOffset;
+        Vector2 regionSize = Vector2.one * 8f;
+        List<Vector2> diceOffsets;
+        int tries = 10;
+
+        do
+        {
+            diceOffsets = PoissonDiscSampling_Scr.GeneratePoints(2.83f, regionSize, 30);
+        } while (diceOffsets.Count < 6 && tries-- > 0);
+
+        for (int i = 0; i < 6; i++)
+        {
+            Vector3 dicePos = posOffset + new Vector3(0, 1, 0);
+            dicePos += new Vector3(diceOffsets[i].x - regionSize.x / 2, 0, diceOffsets[i].y - regionSize.y / 2);
+
+            diceSet[i].transform.position = transform.position + dicePos;
+            RollDice(diceSet[i].transform);
+        }
+    }
+    #endregion
 
     #region Dice Movement
     public void MoveDicesToCup()
@@ -351,7 +432,7 @@ public class Player_Scr : NetworkBehaviour
             RollDice(diceToRoll[i].transform);
         CalculateSelectedDices();
     }
-    private void RollDice(Transform diceTrans)
+    public void RollDice(Transform diceTrans)
     {
         diceTrans.up = diceTrans.GetRandomDirection();
         diceTrans.RotateAround(diceTrans.position, Vector3.up, Random.Range(0f, 360f));
@@ -457,26 +538,5 @@ public class Player_Scr : NetworkBehaviour
     }
     #endregion
 
-    public void SetupPlayer(Cup_Scr newCup, List<Dice_Scr> newDices)
-    {
-        cup = newCup;
-        diceSet = newDices;
-        Transform canvasTrans = GameObject.Find("Canvas").transform;
-        canvasTrans.GetChild(1).gameObject.SetActive(true);
-        UI_Score = canvasTrans.GetChild(1).GetChild(1).GetComponent<TMP_Text>();
-        UI_TurnScore = canvasTrans.GetChild(1).GetChild(2).GetComponent<TMP_Text>();
-        UI_EndTurnBtn = canvasTrans.GetChild(1).GetChild(0).GetComponent<Button>();
-    }
 
-    /*void OnDrawGizmos()
-    {
-        Gizmos.DrawWireCube(regionSize / 2, regionSize);
-        if (diceOffsets != null)
-        {
-            foreach (Vector2 point in diceOffsets)
-            {
-                Gizmos.DrawSphere(point, displayRadius);
-            }
-        }
-    }*/
 }

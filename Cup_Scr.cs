@@ -1,7 +1,8 @@
 using DG.Tweening;
+using Unity.Netcode;
 using UnityEngine;
 
-public class Cup_Scr : MonoBehaviour
+public class Cup_Scr : NetworkBehaviour
 {
     [HideInInspector] public Player_Scr player;
 
@@ -22,6 +23,8 @@ public class Cup_Scr : MonoBehaviour
 
     private void OnMouseDown()
     {
+        if (!IsOwner) return;
+
         if (state == CupState.empty && player.rerollAvailable)
             FillCup();
         if (state == CupState.overturned)
@@ -29,11 +32,15 @@ public class Cup_Scr : MonoBehaviour
     }
     private void OnMouseDrag()
     {
+        if (!IsOwner) return;
+
         if (state == CupState.filled)
             MoveCup();
     }
     private void OnMouseUp()
     {
+        if (!IsOwner) return;
+
         if (state == CupState.filled)
             OverturnCup();
     }

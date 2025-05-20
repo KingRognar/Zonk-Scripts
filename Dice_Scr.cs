@@ -1,6 +1,7 @@
+using Unity.Netcode;
 using UnityEngine;
 
-public class Dice_Scr : MonoBehaviour
+public class Dice_Scr : NetworkBehaviour
 {
     private Outline outline;
     public Player_Scr player;
@@ -26,6 +27,7 @@ public class Dice_Scr : MonoBehaviour
 
     public void ChangeSelected()
     {
+        if (!IsOwner) return;
         if (!isActive) return;
         outline.enabled = !outline.enabled;
         isLeft = !isLeft;
