@@ -67,6 +67,7 @@ public class GameManager_Scr : NetworkBehaviour
         Cup_Scr cupScr = cupObj.GetComponent<Cup_Scr>();
         cupObj.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
         cupObj.transform.parent = newPlayer.transform;
+        cupObj.GetComponent<NetworkObject>().AllowOwnerToParent = true;
 
         List<Dice_Scr> dicesScr = new();
         for (int i = 0; i < 6; i++)
@@ -75,10 +76,11 @@ public class GameManager_Scr : NetworkBehaviour
             dicesScr.Add(diceObj.GetComponent<Dice_Scr>());
             diceObj.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
             diceObj.transform.parent = newPlayer.transform;
+            diceObj.GetComponent<NetworkObject>().AllowOwnerToParent = true;
         }
 
-        CreateBackRefs(newPlayer, cupScr, dicesScr);
-        SetInitialPositions(newPlayer, cupScr, dicesScr);
+        //CreateBackRefs(newPlayer, cupScr, dicesScr);
+        //SetInitialPositions(newPlayer, cupScr, dicesScr);
     }
     private void CreateBackRefs(Player_Scr player, Cup_Scr cup, List<Dice_Scr> dices)
     {

@@ -80,11 +80,13 @@ public class Cup_Scr : NetworkBehaviour
         
         sequence = DOTween.Sequence();
 
-        Vector3 newPos;
-        if (transform.position.x > 0)
-            newPos = new Vector3(-10, 0, -30);
+        Vector3 playerPos = player.transform.position;
+        Vector3 newPos = playerPos;
+        if (playerPos.x == 0)
+            newPos += transform.position.x > 0 ? new Vector3(-10, 0, 0) : new Vector3(10, 0, 0);
         else
-            newPos = new Vector3(10, 0, -30);
+            newPos += transform.position.z > 0 ? new Vector3(0, 0, -10) : new Vector3(0, 0, 10);
+
         sequence.Append(transform.DOMove(newPos, 0.5f));
         sequence.Insert(0, transform.DORotate(new Vector3(0, 0, 0), 0.5f));
         sequence.AppendCallback(() => { state = CupState.empty; });

@@ -3,7 +3,7 @@ using System.Linq;
 using DG.Tweening;
 using TMPro;
 using Unity.Netcode;
-using UnityEditor.PackageManager;
+using Unity.Netcode.Components;
 using UnityEngine;
 using UnityEngine.UI;
 using Sequence = DG.Tweening.Sequence;
@@ -16,9 +16,11 @@ public class Player_Scr : NetworkBehaviour
 
     //References to other objects
     [SerializeField] public Cup_Scr cup;
-    [SerializeField] private TMP_Text UI_Score; //TODO: склеить в один объект
-    [SerializeField] private TMP_Text UI_TurnScore;
-    [SerializeField] private Button UI_EndTurnBtn;
+    [SerializeField] private Transform canvasTrans;
+    private UiRefs uiRefs = new();
+    //[SerializeField] private TMP_Text UI_Score; //TODO: склеить в один объект
+    //[SerializeField] private TMP_Text UI_TurnScore;
+    //[SerializeField] private Button UI_EndTurnBtn;
     [SerializeField] public List<Dice_Scr> diceSet = new();
 
     //Dice selection
@@ -48,7 +50,10 @@ public class Player_Scr : NetworkBehaviour
     //TODO: нельз€ выбирать дайсы до первого броска
     //TODO: писать ли скор, когда выбраны лишние дайсы?
     //TODO: очки по какой-то причине не начисл€ютс€
-
+    //TODO: нельз€ выбирать дайсы когда не надо
+    //TODO: как-то обозначить первый бросок
+    //TODO: комбо неверно размещаютс€
+    //TODO: инициализаци€ дайсов
 
 
 
@@ -82,22 +87,29 @@ public class Player_Scr : NetworkBehaviour
     {
         SetupCamera();
         SetupUI();
-        //SetupCupAndDices();
-        //SetInitialPositions();
+        SetupCupAndDices();
+        SetInitialPositions();
 
         UpdateScore();
         UpdateTurnScore();
     }
     private void SetupUI()
     {
-        Transform canvasTrans = GameObject.Find("Canvas").transform;
+        //Transform canvasTrans = GameObject.Find("Canvas").transform;
+        //canvasTrans.GetChild(1).gameObject.SetActive(true);
+
+        Canvas canvas = FindAnyObjectByType<Canvas>();
+        if (canvas)
+            canvasTrans = canvas.transform;
+        else
+            return;
+
         canvasTrans.GetChild(1).gameObject.SetActive(true);
+        uiRefs.totalScore = canvasTrans.GetChild(1).GetChild(1).GetComponent<TMP_Text>();
+        uiRefs.turnScore = canvasTrans.GetChild(1).GetChild(2).GetComponent<TMP_Text>();
+        uiRefs.endTurn = canvasTrans.GetChild(1).GetChild(0).GetComponent<Button>();
 
-        UI_Score = canvasTrans.GetChild(1).GetChild(1).GetComponent<TMP_Text>();
-        UI_TurnScore = canvasTrans.GetChild(1).GetChild(2).GetComponent<TMP_Text>();
-        UI_EndTurnBtn = canvasTrans.GetChild(1).GetChild(0).GetComponent<Button>();
-
-        UI_EndTurnBtn.onClick.AddListener(EndTurnBtn);
+        uiRefs.endTurn.onClick.AddListener(EndTurnBtn);
     }
     private void SetupCamera()
     {
@@ -114,10 +126,10 @@ public class Player_Scr : NetworkBehaviour
         Camera.main.tag = "Untagged";
         newCamTrans.tag = "MainCamera";
     }
-    private void SetupCupAndDices()
+    private void SetupCupAndDices() //TODO: если дайсы в кружке надо в сет добавл€ть по другому
     {
-        if (!IsOwner)
-            return;
+        /*if (!IsOwner)
+            return;*/
 
         cup = transform.GetChild(0).GetComponent<Cup_Scr>();
         cup.player = this;
@@ -133,8 +145,8 @@ public class Player_Scr : NetworkBehaviour
     }
     private void SetInitialPositions()
     {
-        if (!IsOwner)
-            return;
+        /*if (!IsOwner)
+            return;*/
 
         //CUP
         Vector3 vectorA = -transform.position.normalized;
@@ -175,26 +187,42 @@ public class Player_Scr : NetworkBehaviour
         else
             diceToRoll = GetDiceSelected(false);
         cup.state = Cup_Scr.CupState.filling;
+
+        //TODO: помен€ть diceToRoll на list of ints
+
         int i = 0;
         foreach (Dice_Scr dice in diceToRoll)
         {
-            Sequence sequence = DOTween.Sequence(this);
-            sequence.AppendInterval(i * 0.2f);
-            sequence.Append(dice.transform.DOJump(cup.transform.position + new Vector3(0, 9, 0), 3f, 1, 0.3f).SetEase(Ease.OutCirc));
-            sequence.Append(dice.transform.DOMove(cup.transform.position + new Vector3(0, 1.5f, 0), 0.1f).SetEase(Ease.InCirc));
-            sequence.AppendCallback(() => { dice.transform.SetParent(cup.transform); });
-            if (i == diceToRoll.Count - 1)
-                sequence.AppendCallback(() => { cup.state = Cup_Scr.CupState.filled; });
-            i++;
+            bool last = i++ == diceToRoll.Count - 1 ? true : false;
+            DiceCupSequence(dice, i, last);
+            //dice.transform.DOMove(cup.transform.position + new Vector3(0, 1.5f, 0), 0.3f);
         }
+
         if (!all6)
             MoveCombosToBack(); //TODO: не в конце хода и мб при перебросе
         else
             ResetAllDices();
     }
-    public void DropDicesFromCup()
+    private void DiceCupSequence(Dice_Scr dice,int i, bool addLastCallback)
+    {
+        Vector3 endpoint = cup.transform.position + new Vector3(0, 1.5f, 0);
+        Sequence sequence = DOTween.Sequence(this);
+        sequence.AppendInterval(i * 0.2f);
+        sequence.Append(dice.transform.DOJump(cup.transform.position + new Vector3(0, 9, 0), 3f, 1, 0.3f).SetEase(Ease.OutCirc));
+        sequence.AppendCallback(() => { dice.transform.parent = cup.transform; /*ParentDiceToCupServerRpc(dice.id, true);*/ });
+        sequence.Append(dice.transform.DOMove(endpoint, 0.2f).SetEase(Ease.InCirc));
+        if (addLastCallback)
+            sequence.AppendCallback(() => { cup.state = Cup_Scr.CupState.filled; });
+
+    }
+    public void DropDicesFromCup() //TODO: попробовать с твином
     {
         RollDices();
+
+        /*for (int i = 0; i < diceToRoll.Count; i++)
+        {
+            ParentDiceToCupServerRpc(diceToRoll[i].id, false);
+        }*/
 
         List<Vector2> diceOffsets;
         int tries = 10;
@@ -206,12 +234,18 @@ public class Player_Scr : NetworkBehaviour
 
         for (int i = 0; i < diceToRoll.Count; i++)
         {
+            //NetworkTransform diceTrans = diceToRoll[i].GetComponent<NetworkTransform>();
             Transform diceTrans = diceToRoll[i].transform;
             diceTrans.parent = null;
             Vector3 newPos = new Vector3(cup.transform.position.x, 1, cup.transform.position.z);
             newPos += new Vector3(diceOffsets[i].x - regionSize.x / 2, 0, diceOffsets[i].y - regionSize.y / 2);
             diceTrans.position = newPos;
+            diceTrans.GetComponent<NetworkTransform>().Teleport(diceTrans.position, diceTrans.rotation, diceTrans.localScale);
+            Debug.Log(newPos);
+            //diceTrans.Teleport(newPos, diceToRoll[i].transform.rotation, diceToRoll[i].transform.localScale);
         }
+
+
 
         CheckCombosInActive();
         if (!combosExist)
@@ -228,13 +262,18 @@ public class Player_Scr : NetworkBehaviour
     }
     private void MoveComboToBack(List<Transform> diceTransforms, int comboNum)
     {
+
         float diceDist = 3f;
-        float comboStartX = ((diceTransforms.Count - 1) * diceDist) / -2;
-        float comboDist = -20f + (comboNum * diceDist * 1.5f);
+        Vector3 distPos = transform.position.normalized * (20f + comboNum * diceDist * 1.5f) + new Vector3(0, 1, 0);
+        
+        float startShift = ((diceTransforms.Count - 1) * diceDist) / -2;
+        Vector3 shift = transform.position.x == 0 ? new Vector3(startShift, 0, 0) : new Vector3 (0, 0, startShift);
+
         for (int i = 0; i < diceTransforms.Count; i++)
         {
-            Vector3 newPos = new Vector3(comboStartX, 1, comboDist);
-            comboStartX += diceDist;
+
+            Vector3 newPos = shift + distPos;
+            shift += transform.position.x == 0 ? new Vector3(diceDist, 0, 0) : new Vector3(0, 0, diceDist);
             diceTransforms[i].DOMove(newPos, 0.4f);
         }
     }
@@ -465,15 +504,15 @@ public class Player_Scr : NetworkBehaviour
     private void UpdateTurnScore()
     {
         if (turnScore + tempScore == 0)
-        { UI_TurnScore.text = ""; return; }
+        { uiRefs.turnScore.text = ""; return; }
 
         int textSize = 50 + Mathf.Max(0, (turnScore + tempScore - 500) / 200);
-        UI_TurnScore.text = "+ " + (turnScore + tempScore).ToString();
-        UI_TurnScore.fontSize = textSize;
+        uiRefs.turnScore.text = "+ " + (turnScore + tempScore).ToString();
+        uiRefs.turnScore.fontSize = textSize;
     }
     private void UpdateScore()
     {
-        UI_Score.text = score.ToString() + " / " + maxScore.ToString();
+        uiRefs.totalScore.text = score.ToString() + " / " + maxScore.ToString();
     }
     private void AddTurnScore() //TODO: возможно надо изменить пор€док вызова функций в callback
     {
@@ -481,14 +520,14 @@ public class Player_Scr : NetworkBehaviour
         turnScore = 0;
         tempScore = 0;
         Sequence sequence = DOTween.Sequence();
-        Vector3 textStartPos = UI_TurnScore.rectTransform.position;
+        Vector3 textStartPos = uiRefs.turnScore.rectTransform.position;
 
-        sequence.Append(UI_TurnScore.rectTransform.DOMove(textStartPos + new Vector3(0, -30, 0), 0.3f).SetEase(Ease.OutCirc));
-        sequence.Append(UI_TurnScore.rectTransform.DOMove(UI_Score.rectTransform.position, 0.3f).SetEase(Ease.InCirc));
-        sequence.Insert(0.3f, DOTween.To(() => UI_TurnScore.color, x => UI_TurnScore.color = x, new Color(1, 1, 1, 0), 0.3f));
+        sequence.Append(uiRefs.turnScore.rectTransform.DOMove(textStartPos + new Vector3(0, -30, 0), 0.3f).SetEase(Ease.OutCirc));
+        sequence.Append(uiRefs.turnScore.rectTransform.DOMove(uiRefs.totalScore.rectTransform.position, 0.3f).SetEase(Ease.InCirc));
+        sequence.Insert(0.3f, DOTween.To(() => uiRefs.turnScore.color, x => uiRefs.turnScore.color = x, new Color(1, 1, 1, 0), 0.3f));
         sequence.AppendCallback(() => {
-            UI_TurnScore.color = Color.white;
-            UI_TurnScore.rectTransform.position = textStartPos;
+            uiRefs.turnScore.color = Color.white;
+            uiRefs.turnScore.rectTransform.position = textStartPos;
             UpdateScore();
             UpdateTurnScore();
         });
@@ -499,14 +538,14 @@ public class Player_Scr : NetworkBehaviour
         tempScore = 0;
 
         Sequence sequence = DOTween.Sequence();
-        Vector3 textStartPos = UI_TurnScore.rectTransform.position;
+        Vector3 textStartPos = uiRefs.turnScore.rectTransform.position;
 
-        sequence.Append(UI_TurnScore.DOColor(Color.red, 0.3f));
-        sequence.Append(DOTween.To(() => UI_TurnScore.color, x => UI_TurnScore.color = x, new Color(1, 1, 1, 0), 0.3f));
-        sequence.Insert(0.3f, UI_TurnScore.rectTransform.DOMove(textStartPos + new Vector3(0, -50, 0), 0.3f).SetEase(Ease.InQuart));
+        sequence.Append(uiRefs.turnScore.DOColor(Color.red, 0.3f));
+        sequence.Append(DOTween.To(() => uiRefs.turnScore.color, x => uiRefs.turnScore.color = x, new Color(1, 1, 1, 0), 0.3f));
+        sequence.Insert(0.3f, uiRefs.turnScore.rectTransform.DOMove(textStartPos + new Vector3(0, -50, 0), 0.3f).SetEase(Ease.InQuart));
         sequence.AppendCallback(() => {
-            UI_TurnScore.color = Color.white;
-            UI_TurnScore.rectTransform.position = textStartPos;
+            uiRefs.turnScore.color = Color.white;
+            uiRefs.turnScore.rectTransform.position = textStartPos;
             UpdateTurnScore();
         });
     }
@@ -535,6 +574,12 @@ public class Player_Scr : NetworkBehaviour
     {
         ResetValues();
         DropScore();
+    }
+    private struct UiRefs
+    {
+        public TMP_Text turnScore;
+        public TMP_Text totalScore;
+        public Button endTurn;
     }
     #endregion
 
