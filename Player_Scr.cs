@@ -29,7 +29,7 @@ public class Player_Scr : NetworkBehaviour
     public List<int[]> diceCombos = new List<int[]>();
 
     private int comboCount = 0;
-    private bool firstRoll = true;
+    [HideInInspector] public bool firstRoll = true;
 
     //Score related
     private int score = 0;
@@ -47,12 +47,10 @@ public class Player_Scr : NetworkBehaviour
     //private float displayRadius = 1.4f;
 
     //TODO: прибраться
-    //TODO: нельзя выбирать дайсы до первого броска
     //TODO: писать ли скор, когда выбраны лишние дайсы?
-    //TODO: очки по какой-то причине не начисляются
+    //TODO: очки по какой-то причине не начисляются на клиенте
     //TODO: нельзя выбирать дайсы когда не надо
     //TODO: как-то обозначить первый бросок
-    //TODO: комбо неверно размещаются
     //TODO: инициализация дайсов
 
 
@@ -98,6 +96,8 @@ public class Player_Scr : NetworkBehaviour
         //Transform canvasTrans = GameObject.Find("Canvas").transform;
         //canvasTrans.GetChild(1).gameObject.SetActive(true);
 
+        if (!IsOwner) return;
+
         Canvas canvas = FindAnyObjectByType<Canvas>();
         if (canvas)
             canvasTrans = canvas.transform;
@@ -128,20 +128,34 @@ public class Player_Scr : NetworkBehaviour
     }
     private void SetupCupAndDices() //TODO: если дайсы в кружке надо в сет добавлять по другому
     {
-        /*if (!IsOwner)
-            return;*/
-
         cup = transform.GetChild(0).GetComponent<Cup_Scr>();
         cup.player = this;
 
         diceSet = new();
-        for (int i = 0; i < 6; i++)
+        int i = 0;
+        while (i < 6 && i+1 < transform.childCount)
+        {
+            diceSet.Add(transform.GetChild(i + 1).GetComponent<Dice_Scr>());
+
+            diceSet[i].player = this;
+            diceSet[i].id = i++;
+        }
+        int k = 0;
+        while (i < 6 && k < cup.transform.childCount)
+        {
+            diceSet.Add(cup.transform.GetChild(k++).GetComponent<Dice_Scr>());
+
+            diceSet[i].player = this;
+            diceSet[i].id = i++;
+        }
+
+        /*for (int i = 0; i < 6; i++)
         {
             diceSet.Add(transform.GetChild(i + 1).GetComponent<Dice_Scr>());
 
             diceSet[i].player = this;
             diceSet[i].id = i;
-        }
+        }*/
     }
     private void SetInitialPositions()
     {
@@ -219,11 +233,6 @@ public class Player_Scr : NetworkBehaviour
     {
         RollDices();
 
-        /*for (int i = 0; i < diceToRoll.Count; i++)
-        {
-            ParentDiceToCupServerRpc(diceToRoll[i].id, false);
-        }*/
-
         List<Vector2> diceOffsets;
         int tries = 10;
         do
@@ -234,18 +243,14 @@ public class Player_Scr : NetworkBehaviour
 
         for (int i = 0; i < diceToRoll.Count; i++)
         {
-            //NetworkTransform diceTrans = diceToRoll[i].GetComponent<NetworkTransform>();
             Transform diceTrans = diceToRoll[i].transform;
-            diceTrans.parent = null;
+            diceTrans.parent = transform;
             Vector3 newPos = new Vector3(cup.transform.position.x, 1, cup.transform.position.z);
             newPos += new Vector3(diceOffsets[i].x - regionSize.x / 2, 0, diceOffsets[i].y - regionSize.y / 2);
             diceTrans.position = newPos;
             diceTrans.GetComponent<NetworkTransform>().Teleport(diceTrans.position, diceTrans.rotation, diceTrans.localScale);
-            Debug.Log(newPos);
-            //diceTrans.Teleport(newPos, diceToRoll[i].transform.rotation, diceToRoll[i].transform.localScale);
+            //Debug.Log(newPos);
         }
-
-
 
         CheckCombosInActive();
         if (!combosExist)
@@ -264,7 +269,7 @@ public class Player_Scr : NetworkBehaviour
     {
 
         float diceDist = 3f;
-        Vector3 distPos = transform.position.normalized * (20f + comboNum * diceDist * 1.5f) + new Vector3(0, 1, 0);
+        Vector3 distPos = transform.position.normalized * (20f - comboNum * diceDist * 1.5f) + new Vector3(0, 1, 0);
         
         float startShift = ((diceTransforms.Count - 1) * diceDist) / -2;
         Vector3 shift = transform.position.x == 0 ? new Vector3(startShift, 0, 0) : new Vector3 (0, 0, startShift);
@@ -503,6 +508,8 @@ public class Player_Scr : NetworkBehaviour
     #region UI Thingies
     private void UpdateTurnScore()
     {
+        if (!IsOwner) return;
+
         if (turnScore + tempScore == 0)
         { uiRefs.turnScore.text = ""; return; }
 
@@ -512,6 +519,9 @@ public class Player_Scr : NetworkBehaviour
     }
     private void UpdateScore()
     {
+        if (!IsOwner) return;
+
+        Debug.Log("обновил скор " + score);
         uiRefs.totalScore.text = score.ToString() + " / " + maxScore.ToString();
     }
     private void AddTurnScore() //TODO: возможно надо изменить порядок вызова функций в callback

@@ -21,14 +21,16 @@ public class Dice_Scr : NetworkBehaviour
 
     private void OnMouseDown()
     {
+        if (!IsOwner) return;
+        if (!isActive) return;
+        if (player.firstRoll) return;
+
         ChangeSelected();
         player.OnDiceSelectChange();
     }
 
     public void ChangeSelected()
     {
-        if (!IsOwner) return;
-        if (!isActive) return;
         outline.enabled = !outline.enabled;
         isLeft = !isLeft;
     }
