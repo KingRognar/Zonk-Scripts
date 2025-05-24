@@ -90,6 +90,10 @@ public class Player_Scr : NetworkBehaviour
 
         UpdateScore();
         UpdateTurnScore();
+
+
+        //TODO: rpc to enable score for other players
+        //TODO: enable scores if you're not first client
     }
     private void SetupUI()
     {
@@ -108,8 +112,25 @@ public class Player_Scr : NetworkBehaviour
         uiRefs.totalScore = canvasTrans.GetChild(1).GetChild(1).GetComponent<TMP_Text>();
         uiRefs.turnScore = canvasTrans.GetChild(1).GetChild(2).GetComponent<TMP_Text>();
         uiRefs.endTurn = canvasTrans.GetChild(1).GetChild(0).GetComponent<Button>();
+        uiRefs.playersScores = new();
+        for (int i = 0; i < 3; i++)
+            uiRefs.playersScores.Add(canvasTrans.GetChild(1).GetChild(3).GetChild(i).GetComponent<TMP_Text>());
+
+        EnableOthersScores();
 
         uiRefs.endTurn.onClick.AddListener(EndTurnBtn);
+    }
+    private void EnableOthersScores()
+    {
+        if (OwnerClientId == 0 && NetworkManager.Singleton.ConnectedClientsIds.Count <= 1)
+            return;
+
+        int cnt = NetworkManager.Singleton.ConnectedClientsIds.Count - 1;
+        for (int i = 0; i < cnt; i++)
+        {
+            uiRefs.playersScores[i].gameObject.SetActive(true);
+        }
+
     }
     private void SetupCamera()
     {
@@ -590,6 +611,7 @@ public class Player_Scr : NetworkBehaviour
         public TMP_Text turnScore;
         public TMP_Text totalScore;
         public Button endTurn;
+        public List<TMP_Text> playersScores; 
     }
     #endregion
 

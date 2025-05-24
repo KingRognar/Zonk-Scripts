@@ -6,7 +6,7 @@ public class Dice_Scr : NetworkBehaviour
     private Outline outline;
     public Player_Scr player;
 
-    public int id = -1;
+    public int id = -1; //TODO: мб надо сделать её нетворк вариабле
     public int value = 0;
 
     public bool isLeft = false, isActive = true;
