@@ -53,7 +53,7 @@ public class Player_Scr : NetworkBehaviour
     //TODO: как-то обозначить первый бросок
     //TODO: инициализация дайсов
 
-
+    //MIND: можно использовать rpc.notMe чтобы всех пингануть, чтобы они послали rpc тому кто пинганул что надо!!!
 
 
     private void Start()
@@ -112,25 +112,25 @@ public class Player_Scr : NetworkBehaviour
         uiRefs.totalScore = canvasTrans.GetChild(1).GetChild(1).GetComponent<TMP_Text>();
         uiRefs.turnScore = canvasTrans.GetChild(1).GetChild(2).GetComponent<TMP_Text>();
         uiRefs.endTurn = canvasTrans.GetChild(1).GetChild(0).GetComponent<Button>();
-        uiRefs.playersScores = new();
-        for (int i = 0; i < 3; i++)
-            uiRefs.playersScores.Add(canvasTrans.GetChild(1).GetChild(3).GetChild(i).GetComponent<TMP_Text>());
+        uiRefs.playersScores = GameObject.FindAnyObjectByType<Scores_Scr>(); 
 
         EnableOthersScores();
+        if (OwnerClientId != 0)
+            uiRefs.playersScores.EnableAnotherScoreRpc(OwnerClientId);
 
         uiRefs.endTurn.onClick.AddListener(EndTurnBtn);
     }
     private void EnableOthersScores()
     {
-        if (OwnerClientId == 0 && NetworkManager.Singleton.ConnectedClientsIds.Count <= 1)
+        if (OwnerClientId == 0 /*&& NetworkManager.Singleton.ConnectedClientsIds.Count <= 1*/)
             return;
 
-        int cnt = NetworkManager.Singleton.ConnectedClientsIds.Count - 1;
-        for (int i = 0; i < cnt; i++)
+        ulong[] ids = NetworkManager.Singleton.ConnectedClientsIds.ToArray();
+        for (int i = 0; i < ids.Length; i++)
         {
-            uiRefs.playersScores[i].gameObject.SetActive(true);
+            if (ids[i] == OwnerClientId) continue;
+            uiRefs.playersScores.EnableAnotherScore(ids[i]);
         }
-
     }
     private void SetupCamera()
     {
@@ -611,7 +611,7 @@ public class Player_Scr : NetworkBehaviour
         public TMP_Text turnScore;
         public TMP_Text totalScore;
         public Button endTurn;
-        public List<TMP_Text> playersScores; 
+        public Scores_Scr playersScores; 
     }
     #endregion
 
