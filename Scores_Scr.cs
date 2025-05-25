@@ -28,12 +28,12 @@ public class Scores_Scr : NetworkBehaviour
         text.text = "Player " + (clientId + 1) + ": " + 0;
         listOfScores.Add(clientId, text);
     }
-
-    public void UpdatePlayerScore(ulong clientId, int newScore)
+    [Rpc(SendTo.NotMe)]
+    public void UpdatePlayerScoreRpc(ulong clientId, int newScore)
     {
         if (!listOfScores.ContainsKey(clientId)) { Debug.Log("не нашёл скор с таким ID"); return; }
 
-        listOfScores[clientId].text = "Player " + clientId + ": " + newScore;
+        listOfScores[clientId].text = "Player " + (clientId + 1) + ": " + newScore;
     }
 
 }

@@ -543,6 +543,8 @@ public class Player_Scr : NetworkBehaviour
         if (!IsOwner) return;
 
         Debug.Log("обновил скор " + score);
+
+        uiRefs.playersScores.UpdatePlayerScoreRpc(OwnerClientId, score);
         uiRefs.totalScore.text = score.ToString() + " / " + maxScore.ToString();
     }
     private void AddTurnScore() //TODO: возможно надо изменить порядок вызова функций в callback
