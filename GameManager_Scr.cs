@@ -20,6 +20,7 @@ public class GameManager_Scr : NetworkBehaviour
     [SerializeField] private GameObject scorePref;
     [SerializeField] private GameObject turnScorePref;
     [SerializeField] private GameObject endBtnPref;
+    [SerializeField] private int playerTurn = 0;
 
     private NetworkManager netMan;
 
@@ -34,6 +35,7 @@ public class GameManager_Scr : NetworkBehaviour
     {
         netMan = NetworkManager.Singleton;
         netMan.OnClientConnectedCallback += Middlenman;
+        if (instance == null) instance = this;
     }
 
     public override void OnNetworkSpawn()
@@ -61,6 +63,7 @@ public class GameManager_Scr : NetworkBehaviour
 
         Vector3 spawnPos = spawnPositions[id];
         Player_Scr newPlayer = Instantiate(playerPref, spawnPos, Quaternion.identity).GetComponent<Player_Scr>();
+        listOfPlayers.Add(newPlayer);
         newPlayer.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
 
         GameObject cupObj = Instantiate(cupPref, transform.position, Quaternion.identity);
@@ -82,47 +85,23 @@ public class GameManager_Scr : NetworkBehaviour
         //CreateBackRefs(newPlayer, cupScr, dicesScr);
         //SetInitialPositions(newPlayer, cupScr, dicesScr);
     }
-    private void CreateBackRefs(Player_Scr player, Cup_Scr cup, List<Dice_Scr> dices)
+
+    
+    [Rpc(SendTo.Server)]
+    public void PlayerTurnEndRpc()
     {
-        player.cup = cup;
-        player.diceSet = dices;
+        playerTurn++;
+        if (playerTurn >= netMan.ConnectedClientsIds.Count) playerTurn = 0;
 
-        cup.player = player;
-
-        for (int i = 0; i < dices.Count; i++)
+        ulong nextTarget = netMan.ConnectedClientsIds[playerTurn];
+        RpcParams rpcParams = new RpcParams
         {
-            dices[i].player = player;
-            dices[i].id = i;
-        }
-    }
-    private void SetInitialPositions(Player_Scr player, Cup_Scr cup, List<Dice_Scr> dices)
-    {
-        //CUP
-        Vector3 vectorA = -player.transform.position.normalized;
-        Vector3 vectorB = Vector3.up;
-        Vector3 posOffset = Vector3.Cross(vectorA, vectorB) * 10f;
+            Send = RpcTarget.Single(nextTarget, RpcTargetUse.Temp)
+        };
 
-        cup.transform.position = player.transform.position + posOffset;
+         //TODO: могут быть проблемсы c мемори ликами
 
-        //DICES
-        posOffset = -posOffset;
-        Vector2 regionSize = Vector2.one * 8f;
-        List<Vector2> diceOffsets;
-        int tries = 10;
-
-        do
-        {
-            diceOffsets = PoissonDiscSampling_Scr.GeneratePoints(2.83f, regionSize, 30);
-        } while (diceOffsets.Count < 6 && tries-- > 0);
-
-        for (int i = 0; i < 6; i++)
-        {
-            Vector3 dicePos = posOffset + new Vector3(0, 1, 0);
-            dicePos += new Vector3(diceOffsets[i].x - regionSize.x / 2, 0, diceOffsets[i].y - regionSize.y / 2);
-
-            dices[i].transform.position = player.transform.position + dicePos;
-            player.RollDice(dices[i].transform);
-        }
+        listOfPlayers[(int)nextTarget].PlayerTurnStartRpc(rpcParams);
     }
 
 }

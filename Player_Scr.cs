@@ -18,9 +18,6 @@ public class Player_Scr : NetworkBehaviour
     [SerializeField] public Cup_Scr cup;
     [SerializeField] private Transform canvasTrans;
     private UiRefs uiRefs = new();
-    //[SerializeField] private TMP_Text UI_Score; //TODO: склеить в один объект
-    //[SerializeField] private TMP_Text UI_TurnScore;
-    //[SerializeField] private Button UI_EndTurnBtn;
     [SerializeField] public List<Dice_Scr> diceSet = new();
 
     //Dice selection
@@ -40,6 +37,9 @@ public class Player_Scr : NetworkBehaviour
     public bool rerollAvailable = true;
     private bool all6 = false;
 
+
+    public bool isMyTurn = false;
+
     //Poisson Disc Sampling variables
     private float radius = 2.83f;
     private Vector2 regionSize = Vector2.one * 8f;
@@ -52,6 +52,7 @@ public class Player_Scr : NetworkBehaviour
     //TODO: нельзя выбирать дайсы когда не надо
     //TODO: как-то обозначить первый бросок
     //TODO: инициализация дайсов
+    //TODO: не забыть с onClickEvent'ами разобраться - когда чашка стоит за кнопкой может получится так, что она сработает первее
 
     //MIND: можно использовать rpc.notMe чтобы всех пингануть, чтобы они послали rpc тому кто пинганул что надо!!!
 
@@ -91,6 +92,7 @@ public class Player_Scr : NetworkBehaviour
         UpdateScore();
         UpdateTurnScore();
 
+        if (OwnerClientId == 0) isMyTurn = true; 
 
         //TODO: rpc to enable score for other players
         //TODO: enable scores if you're not first client
@@ -112,11 +114,17 @@ public class Player_Scr : NetworkBehaviour
         uiRefs.totalScore = canvasTrans.GetChild(1).GetChild(1).GetComponent<TMP_Text>();
         uiRefs.turnScore = canvasTrans.GetChild(1).GetChild(2).GetComponent<TMP_Text>();
         uiRefs.endTurn = canvasTrans.GetChild(1).GetChild(0).GetComponent<Button>();
-        uiRefs.playersScores = GameObject.FindAnyObjectByType<Scores_Scr>(); 
+        uiRefs.playersScores = GameObject.FindAnyObjectByType<Scores_Scr>();
+        uiRefs.yourTurnSign = canvasTrans.GetChild(1).GetChild(4).gameObject;
 
         EnableOthersScores();
+
+
+
         if (OwnerClientId != 0)
             uiRefs.playersScores.EnableAnotherScoreRpc(OwnerClientId);
+        else
+            uiRefs.yourTurnSign.SetActive(true);
 
         uiRefs.endTurn.onClick.AddListener(EndTurnBtn);
     }
@@ -587,6 +595,7 @@ public class Player_Scr : NetworkBehaviour
         if (!rerollAvailable)
             return;
 
+        EndTurn();
         ResetValues();
         AddTurnScore();
     }
@@ -605,6 +614,7 @@ public class Player_Scr : NetworkBehaviour
     }
     private void BreakStreakAndEndTurn()
     {
+        EndTurn();
         ResetValues();
         DropScore();
     }
@@ -613,9 +623,26 @@ public class Player_Scr : NetworkBehaviour
         public TMP_Text turnScore;
         public TMP_Text totalScore;
         public Button endTurn;
-        public Scores_Scr playersScores; 
+        public Scores_Scr playersScores;
+        public GameObject yourTurnSign;
     }
     #endregion
+
+    private void EndTurn()
+    {
+        isMyTurn = false;
+        uiRefs.yourTurnSign.gameObject.SetActive(false);
+
+        GameManager_Scr.instance.PlayerTurnEndRpc();
+    }
+    [Rpc(SendTo.SpecifiedInParams)]
+    public void PlayerTurnStartRpc(RpcParams rpcParams)
+    {
+        isMyTurn = true;
+        uiRefs.yourTurnSign.gameObject.SetActive(true);
+
+        //TODO: добавить надпись что мой ход
+    }
 
 
 }

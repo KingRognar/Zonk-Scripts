@@ -24,6 +24,7 @@ public class Dice_Scr : NetworkBehaviour
         if (!IsOwner) return;
         if (!isActive) return;
         if (player.firstRoll) return;
+        if (!player.isMyTurn) return;
 
         ChangeSelected();
         player.OnDiceSelectChange();
