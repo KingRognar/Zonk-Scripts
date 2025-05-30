@@ -13,13 +13,9 @@ public class GameManager_Scr : NetworkBehaviour
     [SerializeField] private GameObject playerPref;
     [SerializeField] private GameObject cupPref;
     [SerializeField] private GameObject dicePref;
-    [SerializeField] private List<Player_Scr> listOfPlayers = new();
-    private NetworkVariable<int> numberOfPlayers = new NetworkVariable<int>(0);
+    [SerializeField] private GameObject handsPref;
     [Space(10)]
-    private Transform canvasTrans;
-    [SerializeField] private GameObject scorePref;
-    [SerializeField] private GameObject turnScorePref;
-    [SerializeField] private GameObject endBtnPref;
+    [SerializeField] private List<Player_Scr> listOfPlayers = new();
     [SerializeField] private int playerTurn = 0;
 
     private NetworkManager netMan;
@@ -69,8 +65,16 @@ public class GameManager_Scr : NetworkBehaviour
         GameObject cupObj = Instantiate(cupPref, transform.position, Quaternion.identity);
         Cup_Scr cupScr = cupObj.GetComponent<Cup_Scr>();
         cupObj.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
-        cupObj.transform.parent = newPlayer.transform;
         cupObj.GetComponent<NetworkObject>().AllowOwnerToParent = true;
+        cupObj.transform.parent = newPlayer.transform;
+
+
+        Vector3 handsPos = spawnPos.normalized * 45 + new Vector3(0, 8, 0);
+        GameObject handsObj = Instantiate(handsPref, handsPos, Quaternion.identity);
+        handsObj.transform.rotation *= Quaternion.LookRotation(-spawnPos, Vector3.up);
+        handsObj.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
+        handsObj.GetComponent<NetworkObject>().AllowOwnerToParent = true;
+        handsObj.transform.parent = newPlayer.transform;
 
         List<Dice_Scr> dicesScr = new();
         for (int i = 0; i < 6; i++)
@@ -78,8 +82,9 @@ public class GameManager_Scr : NetworkBehaviour
             GameObject diceObj = Instantiate(dicePref, transform.position, Quaternion.identity);
             dicesScr.Add(diceObj.GetComponent<Dice_Scr>());
             diceObj.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
-            diceObj.transform.parent = newPlayer.transform;
             diceObj.GetComponent<NetworkObject>().AllowOwnerToParent = true;
+            diceObj.transform.parent = newPlayer.transform;
+
         }
 
         //CreateBackRefs(newPlayer, cupScr, dicesScr);

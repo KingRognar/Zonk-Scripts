@@ -5,20 +5,18 @@ using TMPro;
 using Unity.Netcode;
 using Unity.Netcode.Components;
 using UnityEngine;
+using UnityEngine.Animations.Rigging;
 using UnityEngine.UI;
 using Sequence = DG.Tweening.Sequence;
 
 public class Player_Scr : NetworkBehaviour
 {
-    //Prefabs
-    [SerializeField] private GameObject cupPref;
-    [SerializeField] private GameObject dicePref;
-
     //References to other objects
     [SerializeField] public Cup_Scr cup;
     [SerializeField] private Transform canvasTrans;
     private UiRefs uiRefs = new();
     [SerializeField] public List<Dice_Scr> diceSet = new();
+    [SerializeField] private Hands_Scr hands;
 
     //Dice selection
     private List<Dice_Scr> diceSelected = new(), diceToRoll = new();
@@ -48,10 +46,7 @@ public class Player_Scr : NetworkBehaviour
 
     //TODO: прибраться
     //TODO: писать ли скор, когда выбраны лишние дайсы?
-    //TODO: очки по какой-то причине не начисляются на клиенте
-    //TODO: нельзя выбирать дайсы когда не надо
     //TODO: как-то обозначить первый бросок
-    //TODO: инициализация дайсов
     //TODO: не забыть с onClickEvent'ами разобраться - когда чашка стоит за кнопкой может получится так, что она сработает первее
 
     //MIND: можно использовать rpc.notMe чтобы всех пингануть, чтобы они послали rpc тому кто пинганул что надо!!!
@@ -87,15 +82,13 @@ public class Player_Scr : NetworkBehaviour
         SetupCamera();
         SetupUI();
         SetupCupAndDices();
+        SetupHands();
         SetInitialPositions();
 
         UpdateScore();
         UpdateTurnScore();
 
         if (OwnerClientId == 0) isMyTurn = true; 
-
-        //TODO: rpc to enable score for other players
-        //TODO: enable scores if you're not first client
     }
     private void SetupUI()
     {
@@ -155,16 +148,16 @@ public class Player_Scr : NetworkBehaviour
         Camera.main.tag = "Untagged";
         newCamTrans.tag = "MainCamera";
     }
-    private void SetupCupAndDices() //TODO: если дайсы в кружке надо в сет добавлять по другому
+    private void SetupCupAndDices()
     {
         cup = transform.GetChild(0).GetComponent<Cup_Scr>();
         cup.player = this;
 
         diceSet = new();
         int i = 0;
-        while (i < 6 && i+1 < transform.childCount)
+        while (i < 6 && i+2 < transform.childCount)
         {
-            diceSet.Add(transform.GetChild(i + 1).GetComponent<Dice_Scr>());
+            diceSet.Add(transform.GetChild(i + 2).GetComponent<Dice_Scr>());
 
             diceSet[i].player = this;
             diceSet[i].id = i++;
@@ -177,14 +170,15 @@ public class Player_Scr : NetworkBehaviour
             diceSet[i].player = this;
             diceSet[i].id = i++;
         }
+    }
+    private void SetupHands()
+    {
+        /*if (!transform.GetChild(1).TryGetComponent<Hands_Scr>(out hands))
+            Debug.Log("не получилось взять реф рук", this);*/
+        hands = transform.GetChild(1).GetComponent<Hands_Scr>();
 
-        /*for (int i = 0; i < 6; i++)
-        {
-            diceSet.Add(transform.GetChild(i + 1).GetComponent<Dice_Scr>());
-
-            diceSet[i].player = this;
-            diceSet[i].id = i;
-        }*/
+        hands.rightHandMPC.data.sourceObjects.Add(new WeightedTransform(cup.transform, 0f));
+        hands.leftHandMPC.data.sourceObjects.Add(new WeightedTransform(cup.transform, 0f));
     }
     private void SetInitialPositions()
     {
@@ -231,15 +225,14 @@ public class Player_Scr : NetworkBehaviour
             diceToRoll = GetDiceSelected(false);
         cup.state = Cup_Scr.CupState.filling;
 
-        //TODO: поменять diceToRoll на list of ints
-
         int i = 0;
         foreach (Dice_Scr dice in diceToRoll)
         {
             bool last = i++ == diceToRoll.Count - 1 ? true : false;
             DiceCupSequence(dice, i, last);
-            //dice.transform.DOMove(cup.transform.position + new Vector3(0, 1.5f, 0), 0.3f);
         }
+
+        HandGrabCupSequence();
 
         if (!all6)
             MoveCombosToBack(); //TODO: не в конце хода и мб при перебросе
@@ -252,13 +245,23 @@ public class Player_Scr : NetworkBehaviour
         Sequence sequence = DOTween.Sequence(this);
         sequence.AppendInterval(i * 0.2f);
         sequence.Append(dice.transform.DOJump(cup.transform.position + new Vector3(0, 9, 0), 3f, 1, 0.3f).SetEase(Ease.OutCirc));
-        sequence.AppendCallback(() => { dice.transform.parent = cup.transform; /*ParentDiceToCupServerRpc(dice.id, true);*/ });
+        sequence.AppendCallback(() => { dice.transform.parent = cup.transform; });
         sequence.Append(dice.transform.DOMove(endpoint, 0.2f).SetEase(Ease.InCirc));
         if (addLastCallback)
             sequence.AppendCallback(() => { cup.state = Cup_Scr.CupState.filled; });
 
     }
-    public void DropDicesFromCup() //TODO: попробовать с твином
+    private void HandGrabCupSequence()
+    {
+        //TODO: позиция в зависимости от положения игрока
+        //TODO: двигаться по кривой
+
+        Sequence sequence = DOTween.Sequence(this);
+        sequence.Append(hands.rightHandTarget.DOMove(cup.transform.position + new Vector3(6, 2, 0), 0.5f));
+        sequence.AppendCallback(() => { hands.rightHandMPC.weight = 1f; });
+        
+    }
+    public void DropDicesFromCup()
     {
         RollDices();
 
@@ -278,7 +281,6 @@ public class Player_Scr : NetworkBehaviour
             newPos += new Vector3(diceOffsets[i].x - regionSize.x / 2, 0, diceOffsets[i].y - regionSize.y / 2);
             diceTrans.position = newPos;
             diceTrans.GetComponent<NetworkTransform>().Teleport(diceTrans.position, diceTrans.rotation, diceTrans.localScale);
-            //Debug.Log(newPos);
         }
 
         CheckCombosInActive();
