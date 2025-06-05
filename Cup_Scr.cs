@@ -14,6 +14,7 @@ public class Cup_Scr : NetworkBehaviour
     //[HideInInspector] public bool isMovable = true;
     //[HideInInspector] public bool dicesAreIn = false;
     [HideInInspector] public CupState state = CupState.empty;
+    private bool isRotated = false;
 
 
     private void Start()
@@ -55,6 +56,9 @@ public class Cup_Scr : NetworkBehaviour
         if (sequence != null)
             sequence.Kill();
 
+        if (!isRotated)
+            RotateCup();
+
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
         float dist = 0;
         bool isHit = plane.Raycast(ray, out dist);
@@ -67,6 +71,7 @@ public class Cup_Scr : NetworkBehaviour
     }
     private void OverturnCup()
     {
+        player.HandOverturnCupSequence();
         sequence = DOTween.Sequence();
         Vector3 landPos = new Vector3(transform.position.x, 8.5f, transform.position.z);
         sequence.Append(transform.DOMove(landPos, 0.4f).SetEase(Ease.InBack));
@@ -90,9 +95,14 @@ public class Cup_Scr : NetworkBehaviour
 
         sequence.Append(transform.DOMove(newPos, 0.5f));
         sequence.Insert(0, transform.DORotate(new Vector3(0, 0, 0), 0.5f));
-        sequence.AppendCallback(() => { state = CupState.empty; });
+        sequence.AppendCallback(() => { state = CupState.empty; isRotated = false; });
     }
-
+    private void RotateCup()
+    {
+        transform.DORotate(new Vector3(0, 0, 90), 0.2f);
+        player.HandChangeGrabSequence();
+        isRotated = true;
+    }
 
     private void SetPositionInBoundaries(float minX = -14f, float maxX = 14f, float minY = 0f, float maxY = 17f) //TODO: изменять границы в зависимости от размера экрана
     {

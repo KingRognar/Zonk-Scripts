@@ -4,6 +4,7 @@ using DG.Tweening;
 using TMPro;
 using Unity.Netcode;
 using Unity.Netcode.Components;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Animations.Rigging;
 using UnityEngine.UI;
@@ -177,8 +178,7 @@ public class Player_Scr : NetworkBehaviour
             Debug.Log("не получилось взять реф рук", this);*/
         hands = transform.GetChild(1).GetComponent<Hands_Scr>();
 
-        hands.rightHandMPC.data.sourceObjects.Add(new WeightedTransform(cup.transform, 0f));
-        hands.leftHandMPC.data.sourceObjects.Add(new WeightedTransform(cup.transform, 0f));
+
     }
     private void SetInitialPositions()
     {
@@ -251,19 +251,12 @@ public class Player_Scr : NetworkBehaviour
             sequence.AppendCallback(() => { cup.state = Cup_Scr.CupState.filled; });
 
     }
-    private void HandGrabCupSequence()
-    {
-        //TODO: позиция в зависимости от положения игрока
-        //TODO: двигаться по кривой
 
-        Sequence sequence = DOTween.Sequence(this);
-        sequence.Append(hands.rightHandTarget.DOMove(cup.transform.position + new Vector3(6, 2, 0), 0.5f));
-        sequence.AppendCallback(() => { hands.rightHandMPC.weight = 1f; });
-        
-    }
     public void DropDicesFromCup()
     {
         RollDices();
+
+        HandResetSequence();
 
         List<Vector2> diceOffsets;
         int tries = 10;
@@ -312,6 +305,75 @@ public class Player_Scr : NetworkBehaviour
             shift += transform.position.x == 0 ? new Vector3(diceDist, 0, 0) : new Vector3(0, 0, diceDist);
             diceTransforms[i].DOMove(newPos, 0.4f);
         }
+    }
+    #endregion
+
+    #region Hands Animations
+    //TODO: сделать имена по умному
+    //TODO: вычислять endPos endRot и targetOffset в зависимости от позиции игрока
+    private void HandGrabCupSequence()
+    {
+        //TODO: позиция в зависимости от положения игрока
+        //TODO: двигаться по кривой
+        Vector3 targetOffset = new (5.2f, 2, 0);
+        Vector3 endPos = cup.transform.position + targetOffset;
+        Vector3 endRot = new (5, 60, 90);
+
+        Sequence sequence = DOTween.Sequence(this);
+        sequence.Append(hands.rightHandTarget.DOMove(endPos, 0.5f));
+        sequence.Insert(0, hands.rightHandTarget.DORotate(endRot, 0.5f));
+        sequence.InsertCallback(0.35f, () => {
+            hands.PlayHandGrabAnimation();
+        });
+
+        sequence.AppendCallback(() => {
+            WeightedTransformArray weightedTransforms = new WeightedTransformArray();
+            weightedTransforms.Add(new WeightedTransform(cup.transform, 1));
+            hands.rightHandMPC.data.sourceObjects = weightedTransforms;
+            hands.rightHandMPC.data.offset = targetOffset;
+            hands.rightHandRigBuilder.Build();
+            hands.rightHandMPC.weight = 1;
+        });
+    }
+    private void HandResetSequence()
+    {
+        Vector3 endPos = hands.rightHandStartPos;
+        Quaternion endRot = Quaternion.Euler(-90, 0, 145);//hands.leftHandTarget.rotation;
+        //endRot = endRot * Quaternion.FromToRotation(new Vector3(1, 0, 1).normalized, Vector3.forward);
+
+        hands.PlayHandRestAnimation();
+
+        Sequence sequence = DOTween.Sequence(this);
+        sequence.Append(hands.rightHandTarget.DOMove(endPos, 0.5f));
+        sequence.Insert(0, hands.rightHandTarget.DORotateQuaternion(endRot, 0.5f));
+        //hands.rightHandTarget.DOLocalRotateQuaternion
+        //sequence.Insert(0, hands.rightHandTarget.DORotate(new Vector3(0, 55, 90), 0.5f));
+        sequence.AppendCallback(() => {
+            WeightedTransformArray weightedTransforms = new WeightedTransformArray();
+            weightedTransforms.Add(new WeightedTransform(cup.transform, 1));
+            hands.rightHandMPC.data.sourceObjects.Clear();
+            hands.rightHandRigBuilder.Build();
+            hands.rightHandMPC.weight = 0;
+        });
+    }
+    public void HandChangeGrabSequence()
+    {
+        Vector3 targetOffset = new Vector3(1, -2, 0);
+        Vector3 endRot = new(-5, 90, 0);
+
+        hands.PlayHandGrab2Animation();
+        Sequence sequence = DOTween.Sequence(this);
+        sequence.Append(DOTween.To(() => hands.rightHandMPC.data.offset, x => hands.rightHandMPC.data.offset = x, targetOffset, 0.2f));
+        sequence.Insert(0, hands.rightHandTarget.DORotate(endRot, 0.5f));
+    }
+    public void HandOverturnCupSequence()
+    {
+        Vector3 targetOffset = new Vector3(2, 1, 0);
+        Vector3 endRot = new(-90, 90, 0);
+
+        Sequence sequence = DOTween.Sequence(this);
+        sequence.Append(DOTween.To(() => hands.rightHandMPC.data.offset, x => hands.rightHandMPC.data.offset = x, targetOffset, 0.2f).SetEase(Ease.InBack));
+        sequence.Insert(0, hands.rightHandTarget.DORotate(endRot, 0.5f).SetEase(Ease.InBack));
     }
     #endregion
 

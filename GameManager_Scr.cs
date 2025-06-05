@@ -49,7 +49,7 @@ public class GameManager_Scr : NetworkBehaviour
         SpawnNewPlayerServerRpc(clientId);
     }
     [ServerRpc]
-    public void SpawnNewPlayerServerRpc(ulong clientId)
+    public void SpawnNewPlayerServerRpc(ulong clientId) //TODO: разделить на мелкие методы
     {
         int id = (int)clientId;
         //TODO: защиту нада
