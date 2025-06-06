@@ -39,6 +39,8 @@ public class Player_Scr : NetworkBehaviour
 
     public bool isMyTurn = false;
 
+    private bool startAnimWithRightHand = false;
+
     //Poisson Disc Sampling variables
     private float radius = 2.83f;
     private Vector2 regionSize = Vector2.one * 8f;
@@ -49,6 +51,7 @@ public class Player_Scr : NetworkBehaviour
     //TODO: писать ли скор, когда выбраны лишние дайсы?
     //TODO: как-то обозначить первый бросок
     //TODO: не забыть с onClickEvent'ами разобраться - когда чашка стоит за кнопкой может получится так, что она сработает первее
+    //TODO: синхронизация анимаций
 
     //MIND: можно использовать rpc.notMe чтобы всех пингануть, чтобы они послали rpc тому кто пинганул что надо!!!
 
@@ -232,12 +235,20 @@ public class Player_Scr : NetworkBehaviour
             DiceCupSequence(dice, i, last);
         }
 
-        HandGrabCupSequence();
+
+        CheckWhichHandToAnimate();
+        HandGrabCupSequence(startAnimWithRightHand);
 
         if (!all6)
             MoveCombosToBack(); //TODO: не в конце хода и мб при перебросе
         else
             ResetAllDices();
+    }
+    private void CheckWhichHandToAnimate()
+    {
+        //startAnimWithRightHand
+
+        //TODO:
     }
     private void DiceCupSequence(Dice_Scr dice,int i, bool addLastCallback)
     {
@@ -311,28 +322,32 @@ public class Player_Scr : NetworkBehaviour
     #region Hands Animations
     //TODO: сделать имена по умному
     //TODO: вычислять endPos endRot и targetOffset в зависимости от позиции игрока
-    private void HandGrabCupSequence()
+    private void HandGrabCupSequence(bool isRightHand)
     {
+        Transform handTarget = isRightHand ? hands.rightHandTarget : hands.leftHandTarget;
+        MultiPositionConstraint handMPC = isRightHand ? hands.rightHandMPC : hands.leftHandMPC;
+        RigBuilder rigBuilder = isRightHand ? hands.rightHandRigBuilder : hands.leftHandRigBuilder;
+
         //TODO: позиция в зависимости от положения игрока
         //TODO: двигаться по кривой
-        Vector3 targetOffset = new (5.2f, 2, 0);
+        Vector3 targetOffset = isRightHand ? new(5.2f, 2, 0) : new(-5.2f, 2, 0);
         Vector3 endPos = cup.transform.position + targetOffset;
-        Vector3 endRot = new (5, 60, 90);
+        Vector3 endRot = isRightHand ? new(5, 60, 90) : new(5, -60, -90);
 
         Sequence sequence = DOTween.Sequence(this);
-        sequence.Append(hands.rightHandTarget.DOMove(endPos, 0.5f));
-        sequence.Insert(0, hands.rightHandTarget.DORotate(endRot, 0.5f));
+        sequence.Append(handTarget.DOMove(endPos, 0.5f));
+        sequence.Insert(0, handTarget.DORotate(endRot, 0.5f));
         sequence.InsertCallback(0.35f, () => {
-            hands.PlayHandGrabAnimation();
+            hands.PlayHandGrabAnimation(isRightHand);
         });
 
         sequence.AppendCallback(() => {
             WeightedTransformArray weightedTransforms = new WeightedTransformArray();
             weightedTransforms.Add(new WeightedTransform(cup.transform, 1));
-            hands.rightHandMPC.data.sourceObjects = weightedTransforms;
-            hands.rightHandMPC.data.offset = targetOffset;
-            hands.rightHandRigBuilder.Build();
-            hands.rightHandMPC.weight = 1;
+            handMPC.data.sourceObjects = weightedTransforms;
+            handMPC.data.offset = targetOffset;
+            rigBuilder.Build();
+            handMPC.weight = 1;
         });
     }
     private void HandResetSequence()
