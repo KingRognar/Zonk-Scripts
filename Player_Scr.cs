@@ -39,7 +39,7 @@ public class Player_Scr : NetworkBehaviour
 
     public bool isMyTurn = false;
 
-    private bool startAnimWithRightHand = false;
+    [HideInInspector] public bool startAnimWithRightHand = true;
 
     //Poisson Disc Sampling variables
     private float radius = 2.83f;
@@ -52,6 +52,7 @@ public class Player_Scr : NetworkBehaviour
     //TODO: как-то обозначить первый бросок
     //TODO: не забыть с onClickEvent'ами разобраться - когда чашка стоит за кнопкой может получится так, что она сработает первее
     //TODO: синхронизация анимаций
+    //TODO: двигать руку так чтоб было видно кубики
 
     //MIND: можно использовать rpc.notMe чтобы всех пингануть, чтобы они послали rpc тому кто пинганул что надо!!!
 
@@ -238,6 +239,7 @@ public class Player_Scr : NetworkBehaviour
 
         CheckWhichHandToAnimate();
         HandGrabCupSequence(startAnimWithRightHand);
+        HandCoverCupSequence(!startAnimWithRightHand);
 
         if (!all6)
             MoveCombosToBack(); //TODO: не в конце хода и мб при перебросе
@@ -246,7 +248,7 @@ public class Player_Scr : NetworkBehaviour
     }
     private void CheckWhichHandToAnimate()
     {
-        //startAnimWithRightHand
+        startAnimWithRightHand = cup.transform.position.x > 0 ? true : false;
 
         //TODO:
     }
@@ -267,7 +269,7 @@ public class Player_Scr : NetworkBehaviour
     {
         RollDices();
 
-        HandResetSequence();
+        HandResetSequence(startAnimWithRightHand);
 
         List<Vector2> diceOffsets;
         int tries = 10;
@@ -322,6 +324,7 @@ public class Player_Scr : NetworkBehaviour
     #region Hands Animations
     //TODO: сделать имена по умному
     //TODO: вычислять endPos endRot и targetOffset в зависимости от позиции игрока
+    //TODO: прикрутить slerp или curve
     private void HandGrabCupSequence(bool isRightHand)
     {
         Transform handTarget = isRightHand ? hands.rightHandTarget : hands.leftHandTarget;
@@ -332,7 +335,7 @@ public class Player_Scr : NetworkBehaviour
         //TODO: двигаться по кривой
         Vector3 targetOffset = isRightHand ? new(5.2f, 2, 0) : new(-5.2f, 2, 0);
         Vector3 endPos = cup.transform.position + targetOffset;
-        Vector3 endRot = isRightHand ? new(5, 60, 90) : new(5, -60, -90);
+        Vector3 endRot = isRightHand ? new(5, 60, 90) : new(-5, 120, -90);
 
         Sequence sequence = DOTween.Sequence(this);
         sequence.Append(handTarget.DOMove(endPos, 0.5f));
@@ -350,45 +353,95 @@ public class Player_Scr : NetworkBehaviour
             handMPC.weight = 1;
         });
     }
-    private void HandResetSequence()
+    public void HandChangeGrabSequence(bool isRightHand)
     {
-        Vector3 endPos = hands.rightHandStartPos;
-        Quaternion endRot = Quaternion.Euler(-90, 0, 145);//hands.leftHandTarget.rotation;
-        //endRot = endRot * Quaternion.FromToRotation(new Vector3(1, 0, 1).normalized, Vector3.forward);
+        Transform handTarget = isRightHand ? hands.rightHandTarget : hands.leftHandTarget;
+        MultiPositionConstraint handMPC = isRightHand ? hands.rightHandMPC : hands.leftHandMPC;
 
-        hands.PlayHandRestAnimation();
+        Vector3 targetOffset = isRightHand ? new Vector3(1, -2, 0) : new(-1, -2, 0);
+        Vector3 endRot = isRightHand ? new(-5, 90, 0) : new(5, 90, 180);
+
+        hands.PlayHandGrab2Animation(isRightHand);
+        Sequence sequence = DOTween.Sequence(this);
+        sequence.Append(DOTween.To(() => handMPC.data.offset, x => handMPC.data.offset = x, targetOffset, 0.2f));
+        sequence.Insert(0, handTarget.DORotate(endRot, 0.5f));
+    }
+    private void HandCoverCupSequence(bool isRightHand)
+    {
+        Transform handTarget = isRightHand ? hands.rightHandTarget : hands.leftHandTarget;
+        MultiPositionConstraint handMPC = isRightHand ? hands.rightHandMPC : hands.leftHandMPC;
+        RigBuilder rigBuilder = isRightHand ? hands.rightHandRigBuilder : hands.leftHandRigBuilder;
+
+        //TODO: позиция в зависимости от положения игрока
+        //TODO: двигаться по кривой
+        Vector3 targetOffset = isRightHand ? new(3.4f, 9.4f, 0) : new(-3.4f, 9.4f, 0);
+        Vector3 endPos = cup.transform.position + targetOffset;
+        Vector3 endRot = isRightHand ? new(-90, 90, 0) : new(90, -90, 0);
 
         Sequence sequence = DOTween.Sequence(this);
-        sequence.Append(hands.rightHandTarget.DOMove(endPos, 0.5f));
-        sequence.Insert(0, hands.rightHandTarget.DORotateQuaternion(endRot, 0.5f));
+        sequence.Append(handTarget.DOMove(endPos, 0.5f));
+        sequence.Insert(0, handTarget.DORotate(endRot, 0.5f));
+        sequence.InsertCallback(0.35f, () => {
+            hands.PlayHandCoverAnimation(isRightHand);
+        });
+
+        sequence.AppendCallback(() => {
+            WeightedTransformArray weightedTransforms = new WeightedTransformArray();
+            weightedTransforms.Add(new WeightedTransform(cup.transform, 1));
+            handMPC.data.sourceObjects = weightedTransforms;
+            handMPC.data.offset = targetOffset;
+            rigBuilder.Build();
+            handMPC.weight = 1;
+        });
+    }
+    public void HandChangeCoverSequence(bool isRightHand)
+    {
+        Transform handTarget = isRightHand ? hands.rightHandTarget : hands.leftHandTarget;
+        MultiPositionConstraint handMPC = isRightHand ? hands.rightHandMPC : hands.leftHandMPC;
+
+        Vector3 targetOffset = isRightHand ? new Vector3(9.4f, -3.4f, 0) : new(-9.4f, -3.4f, 0);
+        Vector3 endRot = isRightHand ? new(0, 90, 0) : new(180, -90, 0);
+
+        Sequence sequence = DOTween.Sequence(this);
+        sequence.Append(DOTween.To(() => handMPC.data.offset, x => handMPC.data.offset = x, targetOffset, 0.2f));
+        sequence.Insert(0, handTarget.DORotate(endRot, 0.5f));
+    }
+    public void HandResetSequence(bool isRightHand)
+    {
+        Transform handTarget = isRightHand ? hands.rightHandTarget : hands.leftHandTarget;
+        MultiPositionConstraint handMPC = isRightHand ? hands.rightHandMPC : hands.leftHandMPC;
+        RigBuilder rigBuilder = isRightHand ? hands.rightHandRigBuilder : hands.leftHandRigBuilder;
+
+        Vector3 endPos = isRightHand ? hands.rightHandStartPos : hands.leftHandStartPos;
+        Quaternion endRot = isRightHand ? Quaternion.Euler(-90, 0, 145) : Quaternion.Euler(90, 0, 145);//hands.leftHandTarget.rotation;
+        //endRot = endRot * Quaternion.FromToRotation(new Vector3(1, 0, 1).normalized, Vector3.forward);
+
+        hands.PlayHandRestAnimation(isRightHand);
+
+        Sequence sequence = DOTween.Sequence(this);
+        sequence.Append(handTarget.DOMove(endPos, 0.5f));
+        sequence.Insert(0, handTarget.DORotateQuaternion(endRot, 0.5f));
         //hands.rightHandTarget.DOLocalRotateQuaternion
         //sequence.Insert(0, hands.rightHandTarget.DORotate(new Vector3(0, 55, 90), 0.5f));
         sequence.AppendCallback(() => {
             WeightedTransformArray weightedTransforms = new WeightedTransformArray();
             weightedTransforms.Add(new WeightedTransform(cup.transform, 1));
-            hands.rightHandMPC.data.sourceObjects.Clear();
-            hands.rightHandRigBuilder.Build();
-            hands.rightHandMPC.weight = 0;
+            handMPC.data.sourceObjects.Clear();
+            rigBuilder.Build();
+            handMPC.weight = 0;
         });
     }
-    public void HandChangeGrabSequence()
+    public void HandOverturnCupSequence(bool isRightHand)
     {
-        Vector3 targetOffset = new Vector3(1, -2, 0);
-        Vector3 endRot = new(-5, 90, 0);
+        Transform handTarget = isRightHand ? hands.rightHandTarget : hands.leftHandTarget;
+        MultiPositionConstraint handMPC = isRightHand ? hands.rightHandMPC : hands.leftHandMPC;
 
-        hands.PlayHandGrab2Animation();
-        Sequence sequence = DOTween.Sequence(this);
-        sequence.Append(DOTween.To(() => hands.rightHandMPC.data.offset, x => hands.rightHandMPC.data.offset = x, targetOffset, 0.2f));
-        sequence.Insert(0, hands.rightHandTarget.DORotate(endRot, 0.5f));
-    }
-    public void HandOverturnCupSequence()
-    {
-        Vector3 targetOffset = new Vector3(2, 1, 0);
-        Vector3 endRot = new(-90, 90, 0);
+        Vector3 targetOffset = isRightHand ? new Vector3(2, 1, 0) : new(-2, 1, 0);
+        Vector3 endRot = isRightHand ? new(-90, 90, 0) : new(90, -90, 0);
 
         Sequence sequence = DOTween.Sequence(this);
-        sequence.Append(DOTween.To(() => hands.rightHandMPC.data.offset, x => hands.rightHandMPC.data.offset = x, targetOffset, 0.2f).SetEase(Ease.InBack));
-        sequence.Insert(0, hands.rightHandTarget.DORotate(endRot, 0.5f).SetEase(Ease.InBack));
+        sequence.Append(DOTween.To(() => handMPC.data.offset, x => handMPC.data.offset = x, targetOffset, 0.2f).SetEase(Ease.InBack));
+        sequence.Insert(0, handTarget.DORotate(endRot, 0.5f).SetEase(Ease.InBack));
     }
     #endregion
 

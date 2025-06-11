@@ -71,7 +71,8 @@ public class Cup_Scr : NetworkBehaviour
     }
     private void OverturnCup()
     {
-        player.HandOverturnCupSequence();
+        player.HandOverturnCupSequence(player.startAnimWithRightHand);
+        player.HandResetSequence(!player.startAnimWithRightHand);
         sequence = DOTween.Sequence();
         Vector3 landPos = new Vector3(transform.position.x, 8.5f, transform.position.z);
         sequence.Append(transform.DOMove(landPos, 0.4f).SetEase(Ease.InBack));
@@ -99,8 +100,11 @@ public class Cup_Scr : NetworkBehaviour
     }
     private void RotateCup()
     {
-        transform.DORotate(new Vector3(0, 0, 90), 0.2f);
-        player.HandChangeGrabSequence();
+        Vector3 endRot = player.startAnimWithRightHand ? new(0, 0, 90) : new(0, 0, -90);
+
+        transform.DORotate(endRot, 0.2f);
+        player.HandChangeGrabSequence(player.startAnimWithRightHand);
+        player.HandChangeCoverSequence(!player.startAnimWithRightHand);
         isRotated = true;
     }
 

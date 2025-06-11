@@ -11,6 +11,8 @@ public class Hands_Scr : MonoBehaviour
     public RigBuilder leftHandRigBuilder, rightHandRigBuilder;
     [HideInInspector] public Vector3 leftHandStartPos, rightHandStartPos;
 
+    //TODO: сделать дефолтный метод для проигрывания анимаций
+
 
     private void Start()
     {
@@ -20,16 +22,29 @@ public class Hands_Scr : MonoBehaviour
 
     public void PlayHandRestAnimation(bool isRightHand = true)
     {
-        rightHandAnimator.SetBool("Grab", false);
-        rightHandAnimator.SetBool("ChangeGrab", false);
+        Animator animator = isRightHand ? rightHandAnimator : leftHandAnimator;
+
+        animator.SetBool("Grab", false);
+        animator.SetBool("ChangeGrab", false);
+        animator.SetBool("Cover", false);
     }
     public void PlayHandGrabAnimation(bool isRightHand = true)
     {
-        rightHandAnimator.SetBool("Grab", true);
+        Animator animator = isRightHand ? rightHandAnimator : leftHandAnimator;
+
+        animator.SetBool("Grab", true);
     }
     public void PlayHandGrab2Animation(bool isRightHand = true)
     {
-        rightHandAnimator.SetBool("ChangeGrab", true);
+        Animator animator = isRightHand ? rightHandAnimator : leftHandAnimator;
+
+        animator.SetBool("ChangeGrab", true);
+    }
+    public void PlayHandCoverAnimation(bool isRightHand = true)
+    {
+        Animator animator = isRightHand ? rightHandAnimator : leftHandAnimator;
+
+        animator.SetBool("Cover", true);
     }
 
 }
