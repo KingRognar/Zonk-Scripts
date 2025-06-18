@@ -40,6 +40,7 @@ public class Player_Scr : NetworkBehaviour
     public bool isMyTurn = false;
 
     [HideInInspector] public bool startAnimWithRightHand = true;
+    public Vector3 diceDropPos = Vector3.zero;
 
     //Poisson Disc Sampling variables
     private float radius = 2.83f;
@@ -143,8 +144,7 @@ public class Player_Scr : NetworkBehaviour
         if (!IsOwner)
             return;
 
-        Vector3 camPos = transform.position.normalized * 50;
-        camPos += new Vector3(0, 20, 0);
+        Vector3 camPos = this.GetPositionRelativeToPlayer(new Vector3(0, 0, -20)) + new Vector3(0, 20, 0);
         Transform newCamTrans = Instantiate(Camera.main, camPos, Quaternion.identity).transform;
         newCamTrans.rotation *= Quaternion.LookRotation(-transform.position, Vector3.up);
         newCamTrans.rotation *= Quaternion.Euler(20, 0, 0);
@@ -190,14 +190,15 @@ public class Player_Scr : NetworkBehaviour
             return;*/
 
         //CUP
-        Vector3 vectorA = -transform.position.normalized;
-        Vector3 vectorB = Vector3.up;
-        Vector3 posOffset = Vector3.Cross(vectorA, vectorB) * 10f;
+        //Vector3 vectorA = -transform.position.normalized;
+        //Vector3 vectorB = Vector3.up;
+        //Vector3 posOffset = Vector3.Cross(vectorA, vectorB) * 10f;
 
-        cup.transform.position = transform.position + posOffset;
+        cup.transform.position = this.GetPositionRelativeToPlayer(new Vector3(10,0,0));
 
         //DICES
-        posOffset = -posOffset;
+        //posOffset = -posOffset;
+        diceDropPos = this.GetPositionRelativeToPlayer(new Vector3(-10,0,0)) + new Vector3(0, 3, 0);
         Vector2 regionSize = Vector2.one * 8f;
         List<Vector2> diceOffsets;
         int tries = 10;
@@ -209,10 +210,10 @@ public class Player_Scr : NetworkBehaviour
 
         for (int i = 0; i < 6; i++)
         {
-            Vector3 dicePos = posOffset + new Vector3(0, 1, 0);
+            Vector3 dicePos = this.GetPositionRelativeToPlayer(new Vector3(-10, 0, 0));
             dicePos += new Vector3(diceOffsets[i].x - regionSize.x / 2, 0, diceOffsets[i].y - regionSize.y / 2);
 
-            diceSet[i].transform.position = transform.position + dicePos;
+            diceSet[i].transform.position = dicePos + new Vector3(0, 1, 0);
             RollDice(diceSet[i].transform);
         }
     }
@@ -229,17 +230,23 @@ public class Player_Scr : NetworkBehaviour
             diceToRoll = GetDiceSelected(false);
         cup.state = Cup_Scr.CupState.filling;
 
-        int i = 0;
+        /*int i = 0;
         foreach (Dice_Scr dice in diceToRoll)
         {
             bool last = i++ == diceToRoll.Count - 1 ? true : false;
             DiceCupSequence(dice, i, last);
-        }
-
+        }*/
 
         CheckWhichHandToAnimate();
         HandGrabCupSequence(startAnimWithRightHand);
-        HandCoverCupSequence(!startAnimWithRightHand);
+        Sequence sequence = DOTween.Sequence(this);
+        sequence.Append(HandGrabDicesSequence(!startAnimWithRightHand));
+        sequence.Append(HandCoverCupSequence(!startAnimWithRightHand));
+
+
+
+        
+        //HandCoverCupSequence(!startAnimWithRightHand);
 
         if (!all6)
             MoveCombosToBack(); //TODO: не в конце хода и мб при перебросе
@@ -264,7 +271,6 @@ public class Player_Scr : NetworkBehaviour
             sequence.AppendCallback(() => { cup.state = Cup_Scr.CupState.filled; });
 
     }
-
     public void DropDicesFromCup()
     {
         RollDices();
@@ -341,7 +347,8 @@ public class Player_Scr : NetworkBehaviour
         sequence.Append(handTarget.DOMove(endPos, 0.5f));
         sequence.Insert(0, handTarget.DORotate(endRot, 0.5f));
         sequence.InsertCallback(0.35f, () => {
-            hands.PlayHandGrabAnimation(isRightHand);
+            //hands.PlayHandGrabAnimation(isRightHand);
+            hands.AnimatorSetBool("Grab", isRightHand);
         });
 
         sequence.AppendCallback(() => {
@@ -361,12 +368,13 @@ public class Player_Scr : NetworkBehaviour
         Vector3 targetOffset = isRightHand ? new Vector3(1, -2, 0) : new(-1, -2, 0);
         Vector3 endRot = isRightHand ? new(-5, 90, 0) : new(5, 90, 180);
 
-        hands.PlayHandGrab2Animation(isRightHand);
+        //hands.PlayHandGrab2Animation(isRightHand);
+        hands.AnimatorSetBool("ChangeGrab", isRightHand);
         Sequence sequence = DOTween.Sequence(this);
         sequence.Append(DOTween.To(() => handMPC.data.offset, x => handMPC.data.offset = x, targetOffset, 0.2f));
         sequence.Insert(0, handTarget.DORotate(endRot, 0.5f));
     }
-    private void HandCoverCupSequence(bool isRightHand)
+    private Sequence HandCoverCupSequence(bool isRightHand)
     {
         Transform handTarget = isRightHand ? hands.rightHandTarget : hands.leftHandTarget;
         MultiPositionConstraint handMPC = isRightHand ? hands.rightHandMPC : hands.leftHandMPC;
@@ -379,10 +387,11 @@ public class Player_Scr : NetworkBehaviour
         Vector3 endRot = isRightHand ? new(-90, 90, 0) : new(90, -90, 0);
 
         Sequence sequence = DOTween.Sequence(this);
-        sequence.Append(handTarget.DOMove(endPos, 0.5f));
+        sequence.Append(handTarget.DOJump(endPos, 2f, 1, 0.5f));
         sequence.Insert(0, handTarget.DORotate(endRot, 0.5f));
         sequence.InsertCallback(0.35f, () => {
-            hands.PlayHandCoverAnimation(isRightHand);
+            //hands.PlayHandCoverAnimation(isRightHand);
+            hands.AnimatorSetBool("Cover", isRightHand);
         });
 
         sequence.AppendCallback(() => {
@@ -392,7 +401,17 @@ public class Player_Scr : NetworkBehaviour
             handMPC.data.offset = targetOffset;
             rigBuilder.Build();
             handMPC.weight = 1;
+
+            foreach (Dice_Scr dice in diceToRoll)
+            {
+                dice.leadTrans = null;
+                dice.transform.parent = cup.transform;
+                dice.transform.DOLocalMove(new Vector3(0, 1.5f, 0), 0.1f);
+            }
+            cup.state = Cup_Scr.CupState.filled;
         });
+
+        return sequence;
     }
     public void HandChangeCoverSequence(bool isRightHand)
     {
@@ -406,6 +425,44 @@ public class Player_Scr : NetworkBehaviour
         sequence.Append(DOTween.To(() => handMPC.data.offset, x => handMPC.data.offset = x, targetOffset, 0.2f));
         sequence.Insert(0, handTarget.DORotate(endRot, 0.5f));
     }
+    public void HandOverturnCupSequence(bool isRightHand)
+    {
+        Transform handTarget = isRightHand ? hands.rightHandTarget : hands.leftHandTarget;
+        MultiPositionConstraint handMPC = isRightHand ? hands.rightHandMPC : hands.leftHandMPC;
+
+        Vector3 targetOffset = isRightHand ? new Vector3(2, 1, 0) : new(-2, 1, 0);
+        Vector3 endRot = isRightHand ? new(-90, 90, 0) : new(90, -90, 0);
+
+        Sequence sequence = DOTween.Sequence(this);
+        sequence.Append(DOTween.To(() => handMPC.data.offset, x => handMPC.data.offset = x, targetOffset, 0.2f).SetEase(Ease.InBack));
+        sequence.Insert(0, handTarget.DORotate(endRot, 0.5f).SetEase(Ease.InBack));
+    }
+    private Sequence HandGrabDicesSequence(bool isRightHand)
+    {
+        Transform handTarget = isRightHand ? hands.rightHandTarget : hands.leftHandTarget;
+
+        //TODO: позиция в зависимости от положения игрока
+        //TODO: двигаться по кривой
+        Vector3 endPos = diceDropPos;
+        Vector3 endRot = isRightHand ? new(-90, 0, 110) : new(90, -110, 0);
+
+        hands.AnimatorSetBool("Free", isRightHand);
+        Sequence sequence = DOTween.Sequence(this);
+        
+        sequence.Append(handTarget.DOJump(endPos, 2f, 1, 0.5f));
+        sequence.Insert(0, handTarget.DORotate(endRot, 0.5f));
+        sequence.InsertCallback(0.4f, () => {
+            hands.AnimatorSetBool("Dice", isRightHand);
+
+            foreach (Dice_Scr dice in diceToRoll)
+            {
+                dice.leadTrans = handTarget;
+            }
+        });
+        sequence.AppendInterval(0.1f);
+
+        return sequence;
+    }
     public void HandResetSequence(bool isRightHand)
     {
         Transform handTarget = isRightHand ? hands.rightHandTarget : hands.leftHandTarget;
@@ -416,7 +473,7 @@ public class Player_Scr : NetworkBehaviour
         Quaternion endRot = isRightHand ? Quaternion.Euler(-90, 0, 145) : Quaternion.Euler(90, 0, 145);//hands.leftHandTarget.rotation;
         //endRot = endRot * Quaternion.FromToRotation(new Vector3(1, 0, 1).normalized, Vector3.forward);
 
-        hands.PlayHandRestAnimation(isRightHand);
+        hands.AnimatorResetAllBool(isRightHand);
 
         Sequence sequence = DOTween.Sequence(this);
         sequence.Append(handTarget.DOMove(endPos, 0.5f));
@@ -430,18 +487,6 @@ public class Player_Scr : NetworkBehaviour
             rigBuilder.Build();
             handMPC.weight = 0;
         });
-    }
-    public void HandOverturnCupSequence(bool isRightHand)
-    {
-        Transform handTarget = isRightHand ? hands.rightHandTarget : hands.leftHandTarget;
-        MultiPositionConstraint handMPC = isRightHand ? hands.rightHandMPC : hands.leftHandMPC;
-
-        Vector3 targetOffset = isRightHand ? new Vector3(2, 1, 0) : new(-2, 1, 0);
-        Vector3 endRot = isRightHand ? new(-90, 90, 0) : new(90, -90, 0);
-
-        Sequence sequence = DOTween.Sequence(this);
-        sequence.Append(DOTween.To(() => handMPC.data.offset, x => handMPC.data.offset = x, targetOffset, 0.2f).SetEase(Ease.InBack));
-        sequence.Insert(0, handTarget.DORotate(endRot, 0.5f).SetEase(Ease.InBack));
     }
     #endregion
 

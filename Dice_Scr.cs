@@ -5,6 +5,7 @@ public class Dice_Scr : NetworkBehaviour
 {
     private Outline outline;
     public Player_Scr player;
+    public Transform leadTrans;
 
     public int id = -1; //TODO: мб надо сделать её нетворк вариабле
     public int value = 0;
@@ -17,6 +18,12 @@ public class Dice_Scr : NetworkBehaviour
     {
         outline = GetComponent<Outline>();
         outline.enabled = false;
+    }
+    private void Update()
+    {
+        //TODO: мб что-то получше есть?
+        if (leadTrans != null) 
+            transform.position = Vector3.Lerp(transform.position, leadTrans.position, Time.deltaTime * 5);
     }
 
     private void OnMouseDown()

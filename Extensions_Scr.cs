@@ -29,4 +29,31 @@ public static class Extensions_Scr
             default: return Vector3.zero;
         }
     }
+    public static Vector3 GetPositionRelativeToPlayer(this Player_Scr player, Vector3 vector)
+    {
+        Vector3 result = Vector3.zero;
+        Transform playerTrans = player.transform;
+
+        if (-playerTrans.position.normalized == -Vector3.forward)
+            vector = -vector;
+        else
+            vector = Quaternion.FromToRotation(-playerTrans.position.normalized, Vector3.forward) * vector;
+        result = playerTrans.position + vector;
+
+
+        Debug.Log(result);
+        return result;
+    }
+    public static Vector3 GetOppositeOffset(this Player_Scr player, Vector3 curPosition, float offset)
+    {
+        Vector3 result = Vector3.zero;
+        Transform playerTrans = player.transform;
+
+        if (playerTrans.position.x == 0)
+            result += curPosition.x > 0 ? new Vector3(-offset, 0, 0) : new Vector3(offset, 0, 0);
+        else
+            result += curPosition.z > 0 ? new Vector3(0, 0, -offset) : new Vector3(0, 0, offset);
+
+        return result;
+    }
 }

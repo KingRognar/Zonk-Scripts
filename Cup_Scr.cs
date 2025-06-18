@@ -74,8 +74,10 @@ public class Cup_Scr : NetworkBehaviour
         player.HandOverturnCupSequence(player.startAnimWithRightHand);
         player.HandResetSequence(!player.startAnimWithRightHand);
         sequence = DOTween.Sequence();
-        Vector3 landPos = new Vector3(transform.position.x, 8.5f, transform.position.z);
-        sequence.Append(transform.DOMove(landPos, 0.4f).SetEase(Ease.InBack));
+        Vector3 dropPos = new Vector3(transform.position.x, 8.5f, transform.position.z);
+        player.diceDropPos = dropPos;
+        player.diceDropPos.y = 3;
+        sequence.Append(transform.DOMove(dropPos, 0.4f).SetEase(Ease.InBack));
         sequence.Insert(0, transform.DORotate(new Vector3(0, 0, 180f), 0.4f).SetEase(Ease.InBack));
         sequence.AppendCallback(() => { state = CupState.overturned; });
         //transform.position = Vector3.Lerp(transform.position, initialPos, Time.deltaTime * 2f);
@@ -88,11 +90,7 @@ public class Cup_Scr : NetworkBehaviour
         sequence = DOTween.Sequence();
 
         Vector3 playerPos = player.transform.position;
-        Vector3 newPos = playerPos;
-        if (playerPos.x == 0)
-            newPos += transform.position.x > 0 ? new Vector3(-10, 0, 0) : new Vector3(10, 0, 0);
-        else
-            newPos += transform.position.z > 0 ? new Vector3(0, 0, -10) : new Vector3(0, 0, 10);
+        Vector3 newPos = player.transform.position + player.GetOppositeOffset(transform.position, 10f);
 
         sequence.Append(transform.DOMove(newPos, 0.5f));
         sequence.Insert(0, transform.DORotate(new Vector3(0, 0, 0), 0.5f));

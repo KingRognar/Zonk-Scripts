@@ -20,31 +20,21 @@ public class Hands_Scr : MonoBehaviour
         rightHandStartPos = rightHandTarget.position;
     }
 
-    public void PlayHandRestAnimation(bool isRightHand = true)
+    public void AnimatorResetAllBool(bool isRightHand = true)
     {
         Animator animator = isRightHand ? rightHandAnimator : leftHandAnimator;
 
         animator.SetBool("Grab", false);
         animator.SetBool("ChangeGrab", false);
         animator.SetBool("Cover", false);
+        animator.SetBool("Dice", false);
+        animator.SetBool("Free", false);
     }
-    public void PlayHandGrabAnimation(bool isRightHand = true)
+    public void AnimatorSetBool(string boolName, bool isRightHand = true)
     {
         Animator animator = isRightHand ? rightHandAnimator : leftHandAnimator;
 
-        animator.SetBool("Grab", true);
-    }
-    public void PlayHandGrab2Animation(bool isRightHand = true)
-    {
-        Animator animator = isRightHand ? rightHandAnimator : leftHandAnimator;
-
-        animator.SetBool("ChangeGrab", true);
-    }
-    public void PlayHandCoverAnimation(bool isRightHand = true)
-    {
-        Animator animator = isRightHand ? rightHandAnimator : leftHandAnimator;
-
-        animator.SetBool("Cover", true);
+        animator.SetBool(boolName, true);
     }
 
 }
