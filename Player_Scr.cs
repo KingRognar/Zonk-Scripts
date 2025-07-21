@@ -109,12 +109,13 @@ public class Player_Scr : NetworkBehaviour
         else
             return;
 
-        canvasTrans.GetChild(1).gameObject.SetActive(true);
-        uiRefs.totalScore = canvasTrans.GetChild(1).GetChild(1).GetComponent<TMP_Text>();
-        uiRefs.turnScore = canvasTrans.GetChild(1).GetChild(2).GetComponent<TMP_Text>();
-        uiRefs.endTurn = canvasTrans.GetChild(1).GetChild(0).GetComponent<Button>();
+        Transform gameUiTrans = canvasTrans.GetChild(0);
+        gameUiTrans.gameObject.SetActive(true);
+        uiRefs.totalScore = gameUiTrans.GetChild(1).GetComponent<TMP_Text>();
+        uiRefs.turnScore = gameUiTrans.GetChild(2).GetComponent<TMP_Text>();
+        uiRefs.endTurn = gameUiTrans.GetChild(0).GetComponent<Button>();
         uiRefs.playersScores = GameObject.FindAnyObjectByType<Scores_Scr>();
-        uiRefs.yourTurnSign = canvasTrans.GetChild(1).GetChild(4).gameObject;
+        uiRefs.yourTurnSign = gameUiTrans.GetChild(4).gameObject;
 
         EnableOthersScores();
 

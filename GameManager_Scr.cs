@@ -1,8 +1,11 @@
+using System;
 using System.Collections.Generic;
 using NUnit.Framework;
 using TMPro;
 using Unity.Netcode;
+using UnityEditor.PackageManager;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using static Unity.Burst.Intrinsics.X86.Avx;
 
@@ -23,24 +26,36 @@ public class GameManager_Scr : NetworkBehaviour
     //TODO: прибраться 
     //TODO: передача хода
 
-
     private List<Vector3> spawnPositions = new() {
         new Vector3 (0,0,-30), new Vector3 (0,0,30), new Vector3 (30,0,0), new Vector3(-30,0,0)};
 
-    private void Start()
+    private void Awake()
     {
         netMan = NetworkManager.Singleton;
-        netMan.OnClientConnectedCallback += Middlenman;
+    }
+    private void Start()
+    {
+        netMan.SceneManager.OnLoadEventCompleted += Middleman;
+        //netMan.OnClientConnectedCallback += Middlenman;
+        //netMan.SceneManager.OnLoadComplete += Middlenman;
         if (instance == null) instance = this;
+    }
+
+    private void Middleman(string sceneName, LoadSceneMode loadSceneMode, List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
+    {
+        Debug.Log("тут2");
+        if (!IsHost) return;
+        foreach (ulong clientId in clientsCompleted)
+            SpawnNewPlayerServerRpc(clientId);
     }
 
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
+        SpawnNewPlayerServerRpc(netMan.LocalClientId);
 
         Debug.Log("тут1");
     }
-
 
     public void Middlenman(ulong clientId)
     {
