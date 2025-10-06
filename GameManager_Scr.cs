@@ -1,13 +1,8 @@
 using System;
 using System.Collections.Generic;
-using NUnit.Framework;
-using TMPro;
 using Unity.Netcode;
-using UnityEditor.PackageManager;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
-using static Unity.Burst.Intrinsics.X86.Avx;
 
 public class GameManager_Scr : NetworkBehaviour
 {
@@ -23,8 +18,7 @@ public class GameManager_Scr : NetworkBehaviour
 
     private NetworkManager netMan;
 
-    //TODO: прибраться 
-    //TODO: передача хода
+    //TODO: прибраться
 
     private List<Vector3> spawnPositions = new() {
         new Vector3 (0,0,-30), new Vector3 (0,0,30), new Vector3 (30,0,0), new Vector3(-30,0,0)};

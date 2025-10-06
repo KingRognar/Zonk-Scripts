@@ -19,7 +19,7 @@ public class Cup_Scr : NetworkBehaviour
 
     private void Start()
     {
-        plane = new Plane(-transform.forward, transform.position); //TODO: нужно делать в зависимости от позиции игрока
+        plane = new Plane(-player.transform.forward, transform.position); //TODO: нужно делать в зависимости от позиции игрока // готово?
     }
 
     private void OnMouseDown()

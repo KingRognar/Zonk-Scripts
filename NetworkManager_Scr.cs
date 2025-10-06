@@ -102,7 +102,8 @@ public class NetworkManager_Scr : MonoBehaviour
     private void SteamMatchmaking_OnLobbyMemberJoined(Lobby _lobby, Friend _steamFriend)
     {
         Debug.Log(_steamFriend.Name + " joined lobby");
-        hostGameUI.playerNames[1].text = _steamFriend.Name;
+        int id = NetworkManager.Singleton.ConnectedClientsIds.Count;
+        hostGameUI.playerNames[id].text = _steamFriend.Name;
         //clientNameTMP.text = "client: " + _steamFriend.Name;
     }
     private void SteamMatchmaking_OnLobbyEntered(Lobby _lobby)

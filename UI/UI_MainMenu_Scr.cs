@@ -14,6 +14,7 @@ public class UI_MainMenu_Scr : MonoBehaviour
     [SerializeField] private float zonkRotationAmplitude, zonkMoveAmplitude, zonkRotTime, zonkMovTime;
 
     [SerializeField] private UI_HostGame_Scr hostGameUI;
+    [SerializeField] private UI_Rules_Scr rulesUI;
 
     private void Awake()
     {
@@ -27,9 +28,10 @@ public class UI_MainMenu_Scr : MonoBehaviour
 
         buttons[0].RegisterCallback<ClickEvent>(HostGameClick); // Host
         buttons[1].RegisterCallback<ClickEvent>(JoinGameClick); // Join
-        buttons[2].RegisterCallback<ClickEvent>(OptionsClick); // Options
-        buttons[3].RegisterCallback<ClickEvent>(RulesClick); // Rules
-        buttons[4].RegisterCallback<ClickEvent>(ExitClick); // Exit
+        buttons[2].RegisterCallback<ClickEvent>(DicesClick); // Dices
+        buttons[3].RegisterCallback<ClickEvent>(OptionsClick); // Options
+        buttons[4].RegisterCallback<ClickEvent>(RulesClick); // Rules
+        buttons[5].RegisterCallback<ClickEvent>(ExitClick); // Exit
     }
     private void Start()
     {
@@ -41,12 +43,20 @@ public class UI_MainMenu_Scr : MonoBehaviour
     private void HostGameClick(ClickEvent click)
     {
         NetworkManager_Scr.instance.StartHost(4);
-        hostGameUI.gameObject.SetActive(true);
-        gameObject.SetActive(false);
+
+        if (!hostGameUI.isActiveAndEnabled)
+            hostGameUI.gameObject.SetActive(true);
+        else
+            hostGameUI.GetComponent<UIDocument>().rootVisualElement.style.display = DisplayStyle.Flex;
+        doc.rootVisualElement.style.display = DisplayStyle.None;
     }
     private void JoinGameClick(ClickEvent click)
     {
 
+    }
+    private void DicesClick(ClickEvent click)
+    {
+        //TODO:
     }
     private void OptionsClick(ClickEvent click)
     {
@@ -54,7 +64,11 @@ public class UI_MainMenu_Scr : MonoBehaviour
     }
     private void RulesClick(ClickEvent click)
     {
-
+        if (!rulesUI.isActiveAndEnabled)
+            rulesUI.gameObject.SetActive(true);
+        else
+            rulesUI.GetComponent<UIDocument>().rootVisualElement.style.display = DisplayStyle.Flex;
+        doc.rootVisualElement.style.display = DisplayStyle.None;
     }
     private void ExitClick(ClickEvent click)
     {

@@ -35,10 +35,10 @@ public class UI_HostGame_Scr : MonoBehaviour
     }
     private void BackClick(ClickEvent click)
     {
-        //TODO: вырубать лобби
+        //TODO: отрубать лоббу
 
-        mainMenuUI.gameObject.SetActive(true);
-        gameObject.SetActive(false);
+        mainMenuUI.GetComponent<UIDocument>().rootVisualElement.style.display = DisplayStyle.Flex;
+        doc.rootVisualElement.style.display = DisplayStyle.None;
     }
     #endregion
 }

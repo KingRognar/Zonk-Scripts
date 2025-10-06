@@ -11,7 +11,7 @@ public class Hands_Scr : MonoBehaviour
     public RigBuilder leftHandRigBuilder, rightHandRigBuilder;
     [HideInInspector] public Vector3 leftHandStartPos, rightHandStartPos;
 
-    //TODO: сделать дефолтный метод для проигрывания анимаций
+    //TODO: мб enum вставить?
 
 
     private void Start()
