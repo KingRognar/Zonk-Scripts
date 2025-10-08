@@ -14,6 +14,7 @@ public class UI_MainMenu_Scr : MonoBehaviour
     [SerializeField] private float zonkRotationAmplitude, zonkMoveAmplitude, zonkRotTime, zonkMovTime;
 
     [SerializeField] private UI_HostGame_Scr hostGameUI;
+    [SerializeField] private UI_DiceColoring_Scr diceColoringUI;
     [SerializeField] private UI_Rules_Scr rulesUI;
 
     private void Awake()
@@ -56,7 +57,11 @@ public class UI_MainMenu_Scr : MonoBehaviour
     }
     private void DicesClick(ClickEvent click)
     {
-        //TODO:
+        if (!diceColoringUI.isActiveAndEnabled)
+            diceColoringUI.gameObject.SetActive(true);
+        else
+            diceColoringUI.GetComponent<UIDocument>().rootVisualElement.style.display = DisplayStyle.Flex;
+        doc.rootVisualElement.style.display = DisplayStyle.None;
     }
     private void OptionsClick(ClickEvent click)
     {
