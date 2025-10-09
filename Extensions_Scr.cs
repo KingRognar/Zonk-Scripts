@@ -1,9 +1,22 @@
+using System;
 using Unity.Netcode;
 using Unity.VisualScripting;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public static class Extensions_Scr
 {
+    [Serializable]
+    public struct IntArrayWrapper
+    {
+        public int[] intArray;
+
+        public IntArrayWrapper(int[] array)
+        {
+            intArray = array;
+        }
+    }
+
     public static int[] SubtractArray(this int[] array, int[] subArray)
     {
         int i = 0;

@@ -60,7 +60,11 @@ public class UI_MainMenu_Scr : MonoBehaviour
         if (!diceColoringUI.isActiveAndEnabled)
             diceColoringUI.gameObject.SetActive(true);
         else
+        {
             diceColoringUI.GetComponent<UIDocument>().rootVisualElement.style.display = DisplayStyle.Flex;
+            diceColoringUI.SetDicesActive(true);
+        }
+
         doc.rootVisualElement.style.display = DisplayStyle.None;
     }
     private void OptionsClick(ClickEvent click)
