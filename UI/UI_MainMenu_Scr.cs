@@ -89,6 +89,15 @@ public class UI_MainMenu_Scr : MonoBehaviour
     }
     #endregion
 
+
+    /*public void ChangeMenuForOtherPlayer()
+    {
+        if (!hostGameUI.isActiveAndEnabled)
+            hostGameUI.gameObject.SetActive(true);
+        else
+            hostGameUI.GetComponent<UIDocument>().rootVisualElement.style.display = DisplayStyle.Flex;
+        doc.rootVisualElement.style.display = DisplayStyle.None;
+    }*/
     private void AnimateZonk()
     {
         float tempRot = 0;

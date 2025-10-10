@@ -1,15 +1,21 @@
+using System.Collections.Generic;
 using Netcode.Transports.Facepunch;
 using NUnit.Framework;
+using NUnit.Framework.Internal;
 using Steamworks;
 using Steamworks.Data;
 using TMPro;
+using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 public class NetworkManager_Scr : MonoBehaviour
 {
     [HideInInspector] public PlayerData_Scr playerData;
-    public UI_HostGame_Scr hostGameUI;
+
+    [SerializeField] private UI_HostGame_Scr hostGameUI;
+    [SerializeField] private UI_MainMenu_Scr mainMenuUI; 
 
     public static NetworkManager_Scr instance { get; private set; } = null;
 
@@ -47,6 +53,8 @@ public class NetworkManager_Scr : MonoBehaviour
 
     }
 
+
+
     private void OnDestroy()
     {
         SteamMatchmaking.OnLobbyCreated -= SteamMatchmaking_OnLobbyCreated;
@@ -82,12 +90,19 @@ public class NetworkManager_Scr : MonoBehaviour
         else
         {
             currentLobby = _lobby;
+
+            if (!hostGameUI.isActiveAndEnabled)
+                hostGameUI.gameObject.SetActive(true);
+            else
+                hostGameUI.GetComponent<UIDocument>().rootVisualElement.style.display = DisplayStyle.Flex;
+            mainMenuUI.GetComponent<UIDocument>().rootVisualElement.style.display = DisplayStyle.None;
+
             Debug.Log("Joined lobby from friends list");
         }
     }
     private void SteamMatchmaking_OnLobbyGameCreated(Lobby _lobby, uint _ip, ushort _port, SteamId _steamId)
     {
-        hostGameUI.playerNames[0].text = _lobby.Owner.Name;
+        //hostGameUI.playerNames[0].text = _lobby.Owner.Name;
         Debug.Log("A game server has been associated with the lobby");
     }
     //friend send you an steam invite
@@ -103,14 +118,16 @@ public class NetworkManager_Scr : MonoBehaviour
     {
         Debug.Log(_steamFriend.Name + " joined lobby");
         int id = NetworkManager.Singleton.ConnectedClientsIds.Count;
-        hostGameUI.playerNames[id].text = _steamFriend.Name;
+        RPCManager_Scr.instance.ChangeNameServerRpc(id, _steamFriend.Name);
+        //hostGameUI.playerNames[id].text = _steamFriend.Name;
         //clientNameTMP.text = "client: " + _steamFriend.Name;
     }
     private void SteamMatchmaking_OnLobbyEntered(Lobby _lobby)
     {
         Debug.Log("You've joined " + _lobby.Owner.Name + "'s lobby");
-        Debug.Log(hostGameUI.playerNames[0].text);
-        hostGameUI.playerNames[0].text = _lobby.Owner.Name;
+        //Debug.Log(hostGameUI.playerNames[0].text);
+        RPCManager_Scr.instance.ChangeNameServerRpc(0, _lobby.Owner.Name);
+        //hostGameUI.playerNames[0].text = _lobby.Owner.Name;
 
         RPCManager_Scr.instance.AddPlayerToDictionaryServerRPC(NetworkManager.Singleton.LocalClientId, SteamClient.SteamId, SteamClient.Name);
 
@@ -136,7 +153,7 @@ public class NetworkManager_Scr : MonoBehaviour
         _lobby.SetPublic();
         _lobby.SetJoinable(true);
         _lobby.SetGameServer(_lobby.Owner.Id);
-        hostGameUI.playerNames[0].text = _lobby.Owner.Name;
+        //hostGameUI.playerNames[0].text = _lobby.Owner.Name;
         //hostNameTMP.text = "Host: " + _lobby.Owner.Name;
         Debug.Log($"{_lobby.Owner.Name} created lobby");
     }
@@ -196,4 +213,7 @@ public class NetworkManager_Scr : MonoBehaviour
     {
         Debug.Log("Host started");
     }
+
+
+
 }
