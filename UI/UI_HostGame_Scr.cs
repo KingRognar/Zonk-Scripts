@@ -32,9 +32,6 @@ public class UI_HostGame_Scr : MonoBehaviour
 
         buttons[0].RegisterCallback<ClickEvent>(StartGameClick); // Start
         buttons[1].RegisterCallback<ClickEvent>(BackClick); // Back
-
-        if (NetworkManager.Singleton.IsClient)
-            Sync();
     }
 
     #region Click Events
@@ -51,12 +48,4 @@ public class UI_HostGame_Scr : MonoBehaviour
         doc.rootVisualElement.style.display = DisplayStyle.None;
     }
     #endregion
-
-    public void Sync()
-    {
-        for (int i = 0; i < 4; i++)
-        {
-            playerNames[i].text = RPCManager_Scr.instance.playerNamesNV[i].Value.ToString();
-        }
-    }
 }

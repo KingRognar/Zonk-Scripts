@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
+using static Extensions_Scr;
 
-public class PlayerData_Scr : MonoBehaviour
+public class PlayerData_Scr : NetworkBehaviour
 {
     public static PlayerData_Scr instance;
 
@@ -19,18 +21,6 @@ public class PlayerData_Scr : MonoBehaviour
             Destroy(gameObject);
             return;
         }
-    }
-
-    public struct PlayerNetData
-    {
-        public PlayerNetData(ulong steamid, string name)
-        {
-            steamID = steamid;
-            steamName = name;
-        }
-
-        public ulong steamID;
-        public string steamName;
     }
 }
  

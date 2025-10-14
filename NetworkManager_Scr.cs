@@ -50,7 +50,6 @@ public class NetworkManager_Scr : MonoBehaviour
         SteamMatchmaking.OnLobbyInvite += SteamMatchmaking_OnLobbyInvite;
         SteamMatchmaking.OnLobbyGameCreated += SteamMatchmaking_OnLobbyGameCreated;
         SteamFriends.OnGameLobbyJoinRequested += SteamFriends_OnGameLobbyJoinRequested;
-
     }
 
 
@@ -82,6 +81,8 @@ public class NetworkManager_Scr : MonoBehaviour
     //when you accept the invite or Join on a friend
     private async void SteamFriends_OnGameLobbyJoinRequested(Lobby _lobby, SteamId _steamId)
     {
+        Debug.Log("SteamFriends_OnGameLobbyJoinRequested");
+
         RoomEnter joinedLobby = await _lobby.Join();
         if (joinedLobby != RoomEnter.Success)
         {
@@ -102,20 +103,24 @@ public class NetworkManager_Scr : MonoBehaviour
     }
     private void SteamMatchmaking_OnLobbyGameCreated(Lobby _lobby, uint _ip, ushort _port, SteamId _steamId)
     {
+        Debug.Log("SteamMatchmaking_OnLobbyGameCreated");
         //hostGameUI.playerNames[0].text = _lobby.Owner.Name;
         Debug.Log("A game server has been associated with the lobby");
     }
     //friend send you an steam invite
     private void SteamMatchmaking_OnLobbyInvite(Friend _steamFriend, Lobby _lobby)
     {
+        Debug.Log("SteamMatchmaking_OnLobbyInvite");
         Debug.Log($"Invite from {_steamFriend.Name}");
     }
     private void SteamMatchmaking_OnLobbyMemberLeave(Lobby _lobby, Friend _steamFriend)
     {
+        Debug.Log("SteamMatchmaking_OnLobbyMemberLeave");
         Debug.Log(_steamFriend.Name + " left lobby");
     }
     private void SteamMatchmaking_OnLobbyMemberJoined(Lobby _lobby, Friend _steamFriend)
     {
+        Debug.Log("SteamMatchmaking_OnLobbyMemberJoined");
         Debug.Log(_steamFriend.Name + " joined lobby");
         int id = NetworkManager.Singleton.ConnectedClientsIds.Count;
         RPCManager_Scr.instance.ChangeNameServerRpc(id, _steamFriend.Name);
@@ -124,6 +129,7 @@ public class NetworkManager_Scr : MonoBehaviour
     }
     private void SteamMatchmaking_OnLobbyEntered(Lobby _lobby)
     {
+        Debug.Log("SteamMatchmaking_OnLobbyEntered");
         Debug.Log("You've joined " + _lobby.Owner.Name + "'s lobby");
         //Debug.Log(hostGameUI.playerNames[0].text);
         RPCManager_Scr.instance.ChangeNameServerRpc(0, _lobby.Owner.Name);
@@ -144,6 +150,8 @@ public class NetworkManager_Scr : MonoBehaviour
     }
     private void SteamMatchmaking_OnLobbyCreated(Result _result, Lobby _lobby)
     {
+        Debug.Log("SteamMatchmaking_OnLobbyCreated");
+
         if (_result != Result.OK)
         {
             Debug.Log("lobby was not created");
@@ -161,12 +169,16 @@ public class NetworkManager_Scr : MonoBehaviour
 
     public async void StartHost(int _maxMembers)
     {
+        Debug.Log("StartHost " + _maxMembers);
+
         NetworkManager.Singleton.OnServerStarted += Singleton_OnServerStarted;
         NetworkManager.Singleton.StartHost();
         currentLobby = await SteamMatchmaking.CreateLobbyAsync(_maxMembers);
     }
     public void StartClient(SteamId _sId)
     {
+        Debug.Log("StartClient " + _sId);
+
         NetworkManager.Singleton.OnClientConnectedCallback += Singleton_OnClientConnectedCallback;
         NetworkManager.Singleton.OnClientDisconnectCallback += Singleton_OnClientDisconnectCallback;
         transport.targetSteamId = _sId;
@@ -177,6 +189,8 @@ public class NetworkManager_Scr : MonoBehaviour
     }
     public void Disconnected()
     {
+        Debug.Log("Disconnected");
+
         currentLobby?.Leave();
         if (NetworkManager.Singleton == null)
         {
@@ -191,11 +205,12 @@ public class NetworkManager_Scr : MonoBehaviour
             NetworkManager.Singleton.OnClientConnectedCallback -= Singleton_OnClientConnectedCallback;
         }
         NetworkManager.Singleton.Shutdown(true);
-        Debug.Log("disconnected");
     }
 
     private void Singleton_OnClientDisconnectCallback(ulong _cliendId)
     {
+        Debug.Log($"Singleton_OnClientDisconnectCallback " + _cliendId);
+
         NetworkManager.Singleton.OnClientDisconnectCallback -= Singleton_OnClientDisconnectCallback;
         if (_cliendId == 0)
         {
@@ -204,14 +219,16 @@ public class NetworkManager_Scr : MonoBehaviour
     }
     private void Singleton_OnClientConnectedCallback(ulong _cliendId)
     {
+        Debug.Log($"Singleton_OnClientConnectedCallback " + _cliendId);
+
         /*NetworkTransmission.instance.AddMeToDictionaryServerRPC(SteamClient.SteamId, SteamClient.Name, _cliendId);
         GameManager.instance.myClientId = _cliendId;
         NetworkTransmission.instance.IsTheClientReadyServerRPC(false, _cliendId);*/
-        Debug.Log($"Client has connected : AnotherFakeSteamName");
+        RPCManager_Scr.instance.AddPlayerToDictionaryServerRPC(_cliendId, SteamClient.SteamId, SteamClient.Name);
     }
     private void Singleton_OnServerStarted()
     {
-        Debug.Log("Host started");
+        Debug.Log("Singleton_OnServerStarted");
     }
 
 

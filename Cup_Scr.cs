@@ -19,7 +19,7 @@ public class Cup_Scr : NetworkBehaviour
 
     private void Start()
     {
-        plane = new Plane(-player.transform.forward, transform.position); //TODO: нужно делать в зависимости от позиции игрока // готово?
+        //plane = new Plane(-player.transform.forward, transform.position); //TODO: нужно делать в зависимости от позиции игрока // готово?
     }
 
     private void OnMouseDown()
@@ -45,6 +45,11 @@ public class Cup_Scr : NetworkBehaviour
 
         if (state == CupState.filled)
             OverturnCup();
+    }
+
+    public void Initialization()
+    {
+        plane = new Plane(-player.transform.forward, transform.position); //TODO: нужно делать в зависимости от позиции игрока // готово?
     }
 
     private void FillCup()

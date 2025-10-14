@@ -16,6 +16,17 @@ public static class Extensions_Scr
             intArray = array;
         }
     }
+    public struct PlayerNetData
+    {
+        public PlayerNetData(ulong steamid, string name)
+        {
+            steamID = steamid;
+            steamName = name;
+        }
+
+        public ulong steamID;
+        public string steamName;
+    }
 
     public static int[] SubtractArray(this int[] array, int[] subArray)
     {
@@ -69,4 +80,6 @@ public static class Extensions_Scr
 
         return result;
     }
+
+
 }

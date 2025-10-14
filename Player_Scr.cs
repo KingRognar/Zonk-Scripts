@@ -48,6 +48,11 @@ public class Player_Scr : NetworkBehaviour
     private int rejectionSamples = 30;
     //private float displayRadius = 1.4f;
 
+    private float initTimer;
+    private bool notInit = true;
+
+    Dictionary<ulong, NetworkObject> netObjects;
+
     //TODO: прибраться
     //TODO: писать ли скор, когда выбраны лишние дайсы?
     //TODO: как-то обозначить первый бросок
@@ -57,10 +62,17 @@ public class Player_Scr : NetworkBehaviour
 
     //MIND: можно использовать rpc.notMe чтобы всех пингануть, чтобы они послали rpc тому кто пинганул что надо!!!
 
+    //TODO: попробовать инициализацию через networkobject id 
 
+    public override void OnNetworkSpawn()
+    {
+        base.OnNetworkSpawn();
+        if (NetworkObject.IsOwner)
+            Initialize();
+    }
     private void Start()
     {
-        Initialize();
+        //Initialize();
     }
     private void Update()
     {
@@ -68,7 +80,6 @@ public class Player_Scr : NetworkBehaviour
         {
             //SetSpecialValues();
         }
-
     }
     private void SetSpecialValues()
     {
@@ -85,6 +96,9 @@ public class Player_Scr : NetworkBehaviour
     #region Init
     public void Initialize()
     {
+        netObjects = NetworkManager.Singleton.SpawnManager.SpawnedObjects;
+        notInit = !notInit;
+
         SetupCamera();
         SetupUI();
         SetupCupAndDices();
@@ -93,6 +107,8 @@ public class Player_Scr : NetworkBehaviour
 
         UpdateScore();
         UpdateTurnScore();
+
+        notInit = false;
 
         if (OwnerClientId == 0) isMyTurn = true; 
     }
@@ -156,11 +172,33 @@ public class Player_Scr : NetworkBehaviour
     }
     private void SetupCupAndDices()
     {
-        cup = transform.GetChild(0).GetComponent<Cup_Scr>();
+        ulong clientCupId = 4 + (NetworkManager.Singleton.LocalClientId * 9);
+        NetworkObject netCup;
+
+        if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(clientCupId, out netCup)) Debug.Log("не получилось взять netCup");
+
+        cup = netCup.GetComponent<Cup_Scr>();
         cup.player = this;
+        cup.transform.parent = transform;
+        //cup.Initialization();
+
+
 
         diceSet = new();
-        int i = 0;
+        ulong firstClientDiceId = 6 + (NetworkManager.Singleton.LocalClientId * 9);
+        for (int i = 0; i < 6; i++)
+        {
+            NetworkObject netDice;
+
+            if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(firstClientDiceId + (ulong)i, out netDice)) Debug.Log("не получилось взять netDice");
+
+            diceSet.Add(netDice.GetComponent<Dice_Scr>());
+            diceSet[i].player = this;
+            diceSet[i].transform.parent = transform;
+            diceSet[i].id = i;
+        }
+
+        /*int i = 0;
         while (i < 6 && i+2 < transform.childCount)
         {
             diceSet.Add(transform.GetChild(i + 2).GetComponent<Dice_Scr>());
@@ -175,15 +213,21 @@ public class Player_Scr : NetworkBehaviour
 
             diceSet[i].player = this;
             diceSet[i].id = i++;
-        }
+        }*/
     }
     private void SetupHands()
     {
         /*if (!transform.GetChild(1).TryGetComponent<Hands_Scr>(out hands))
             Debug.Log("не получилось взять реф рук", this);*/
-        hands = transform.GetChild(1).GetComponent<Hands_Scr>();
+        //hands = transform.GetChild(1).GetComponent<Hands_Scr>();
 
+        ulong clientHandsId = 5 + (NetworkManager.Singleton.LocalClientId * 9);
+        NetworkObject netHands;
 
+        if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(clientHandsId, out netHands)) Debug.Log("не получилось взять netHands");
+
+        hands = netHands.GetComponent<Hands_Scr>();
+        hands.transform.parent = transform;
     }
     private void SetInitialPositions()
     {
@@ -196,7 +240,7 @@ public class Player_Scr : NetworkBehaviour
         //Vector3 posOffset = Vector3.Cross(vectorA, vectorB) * 10f;
 
         cup.transform.position = this.GetPositionRelativeToPlayer(new Vector3(10,0,0));
-
+        cup.Initialization();
         //DICES
         //posOffset = -posOffset;
         diceDropPos = this.GetPositionRelativeToPlayer(new Vector3(-10,0,0)) + new Vector3(0, 3, 0);

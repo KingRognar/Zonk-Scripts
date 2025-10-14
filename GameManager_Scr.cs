@@ -31,16 +31,16 @@ public class GameManager_Scr : NetworkBehaviour
     private void Awake()
     {
         netMan = NetworkManager.Singleton;
+        netMan.SceneManager.OnLoadEventCompleted += Middleman;
     }
     private void Start()
     {
-        netMan.SceneManager.OnLoadEventCompleted += Middleman;
         //netMan.OnClientConnectedCallback += Middlenman;
         //netMan.SceneManager.OnLoadComplete += Middlenman;
         if (instance == null) instance = this;
     }
 
-    private void Middleman(string sceneName, LoadSceneMode loadSceneMode, List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
+    public void Middleman(string sceneName, LoadSceneMode loadSceneMode, List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
     {
         Debug.Log("тут2");
         if (!IsHost) return;
@@ -48,20 +48,6 @@ public class GameManager_Scr : NetworkBehaviour
             SpawnNewPlayerServerRpc(clientId);
     }
 
-    public override void OnNetworkSpawn()
-    {
-        base.OnNetworkSpawn();
-        SpawnNewPlayerServerRpc(netMan.LocalClientId);
-
-        Debug.Log("тут1");
-    }
-
-    public void Middlenman(ulong clientId)
-    {
-        Debug.Log("тут2");
-        if (!IsHost) return;
-        SpawnNewPlayerServerRpc(clientId);
-    }
     [ServerRpc]
     public void SpawnNewPlayerServerRpc(ulong clientId) //TODO: разделить на мелкие методы
     {
@@ -74,13 +60,13 @@ public class GameManager_Scr : NetworkBehaviour
         Vector3 spawnPos = spawnPositions[id];
         Player_Scr newPlayer = Instantiate(playerPref, spawnPos, Quaternion.identity).GetComponent<Player_Scr>();
         listOfPlayers.Add(newPlayer);
-        newPlayer.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
+
 
         GameObject cupObj = Instantiate(cupPref, transform.position, Quaternion.identity);
         Cup_Scr cupScr = cupObj.GetComponent<Cup_Scr>();
         cupObj.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
         cupObj.GetComponent<NetworkObject>().AllowOwnerToParent = true;
-        cupObj.transform.parent = newPlayer.transform;
+        //cupObj.transform.parent = newPlayer.transform;
 
 
         Vector3 handsPos = spawnPos.normalized * 45 + new Vector3(0, 8, 0);
@@ -88,7 +74,7 @@ public class GameManager_Scr : NetworkBehaviour
         handsObj.transform.rotation *= Quaternion.LookRotation(-spawnPos, Vector3.up);
         handsObj.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
         handsObj.GetComponent<NetworkObject>().AllowOwnerToParent = true;
-        handsObj.transform.parent = newPlayer.transform;
+        //handsObj.transform.parent = newPlayer.transform;
 
         List<GameObject> dices = new List<GameObject>();
         for (int i = 0; i < 6; i++)
@@ -97,9 +83,11 @@ public class GameManager_Scr : NetworkBehaviour
             dices.Add(diceObj);
             diceObj.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
             diceObj.GetComponent<NetworkObject>().AllowOwnerToParent = true;
-            diceObj.transform.parent = newPlayer.transform;
+            //diceObj.transform.parent = newPlayer.transform;
 
         }
+
+        newPlayer.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
 
         LoadDiceColoringSchemes(dices);
         //CreateBackRefs(newPlayer, cupScr, dicesScr);
