@@ -160,6 +160,7 @@ public class NetworkManager_Scr : MonoBehaviour
         Debug.Log("lobby was created");
         _lobby.SetPublic();
         _lobby.SetJoinable(true);
+        _lobby.SetData("name", _lobby.Owner.Name + "'s lobby");
         _lobby.SetGameServer(_lobby.Owner.Id);
         //hostGameUI.playerNames[0].text = _lobby.Owner.Name;
         //hostNameTMP.text = "Host: " + _lobby.Owner.Name;

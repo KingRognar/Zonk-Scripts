@@ -22,13 +22,10 @@ public class UI_HostGame_Scr : MonoBehaviour
 
     private void Awake()
     {
-        Debug.Log("init");
-
         doc = GetComponent<UIDocument>();
 
         buttons = doc.rootVisualElement.Query<Button>().ToList();
         playerNames = doc.rootVisualElement.Query<Label>("Name").ToList();
-        Debug.Log(buttons.Count + "   " + playerNames.Count);
 
         buttons[0].RegisterCallback<ClickEvent>(StartGameClick); // Start
         buttons[1].RegisterCallback<ClickEvent>(BackClick); // Back

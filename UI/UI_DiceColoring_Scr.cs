@@ -14,7 +14,7 @@ public class UI_DiceColoring_Scr : MonoBehaviour
 
     [SerializeField] private UI_MainMenu_Scr mainUI;
 
-    [SerializeField] private VisualTreeAsset coloringOptionBtn;
+    [SerializeField] private VisualTreeAsset coloringOptionVTA;
 
     [SerializeField] private GameObject[] dices;
     private int[] dicesColoringShemeIds = new int[6] { 0, 0, 0, 0, 0, 0 };
@@ -47,7 +47,7 @@ public class UI_DiceColoring_Scr : MonoBehaviour
         VisualElement setsContainer = doc.rootVisualElement.Q("OptionsContainer");
         foreach (DiceMaterialSetSO_Scr set in diceMaterialSets)
         {
-            TemplateContainer templateContainer = coloringOptionBtn.Instantiate();
+            TemplateContainer templateContainer = coloringOptionVTA.Instantiate();
             Button button = templateContainer.Q<Button>();
             button.RegisterCallback<ClickEvent>(MaterialSetClick);
             setButtons.Add(button);
