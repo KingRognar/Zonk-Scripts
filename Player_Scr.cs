@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using DG.Tweening;
 using TMPro;
@@ -8,6 +9,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Animations.Rigging;
 using UnityEngine.UI;
+using static Extensions_Scr;
 using Sequence = DG.Tweening.Sequence;
 
 public class Player_Scr : NetworkBehaviour
@@ -26,6 +28,9 @@ public class Player_Scr : NetworkBehaviour
 
     private int comboCount = 0;
     [HideInInspector] public bool firstRoll = true;
+
+    //TODO: нада придумать как получше загружать необходимые маериалы, сейчас я тупа гружу все через едиотр
+    [SerializeField] private List<DiceMaterialSetSO_Scr> diceMaterialSets;
 
     //Score related
     private int score = 0;
@@ -198,6 +203,8 @@ public class Player_Scr : NetworkBehaviour
             diceSet[i].id = i;
         }
 
+        LoadDiceColoringSchemes();
+
         /*int i = 0;
         while (i < 6 && i+2 < transform.childCount)
         {
@@ -260,6 +267,53 @@ public class Player_Scr : NetworkBehaviour
 
             diceSet[i].transform.position = dicePos + new Vector3(0, 1, 0);
             RollDice(diceSet[i].transform);
+        }
+    }
+    private void LoadDiceColoringSchemes()
+    {
+        //TODO: нада придумать как получше загружать необходимые маериалы, сейчас я тупа гружу все через едиотр
+
+        string saveFilePath = Application.persistentDataPath + "/diceColoring.json";
+        int[] dicesColoringSchemeIds = new int[6] { 0, 0, 0, 0, 0, 0 };
+
+
+
+        if (File.Exists(saveFilePath))
+        {
+            string jsonString = File.ReadAllText(saveFilePath);
+            dicesColoringSchemeIds = JsonUtility.FromJson<IntArrayWrapper>(jsonString).intArray;
+        }
+
+
+        ulong[] diceIds = GetDiceNetIDs();
+        DiceColoringClientRpc(dicesColoringSchemeIds, diceIds, NetworkManager.LocalClientId);
+        for (int i = 0; i < 6; i++)
+        {
+            Renderer renderer = diceSet[i].GetComponent<Renderer>();
+            List<Material> materials = diceMaterialSets[dicesColoringSchemeIds[i]].materials;
+            renderer.SetMaterials(materials);
+        }
+    }
+    private ulong[] GetDiceNetIDs()
+    {
+        ulong[] ans = new ulong[6];
+
+        for (int i = 0; i < ans.Length; i++)
+            ans[i] = diceSet[i].NetworkObjectId;
+
+        return ans;
+    }
+    [Rpc(SendTo.ClientsAndHost)]
+    private void DiceColoringClientRpc(int[] coloringSchemes, ulong[] diceIds, ulong playerID)
+    {
+        if (NetworkManager.LocalClientId == playerID) return;
+
+        for (int i = 0; i < 6; i++)
+        {
+            NetworkObject netDice = NetworkManager.Singleton.SpawnManager.SpawnedObjects.GetValueOrDefault(diceIds[i]);
+            Renderer renderer = netDice.GetComponent<Renderer>();
+            List<Material> materials = diceMaterialSets[coloringSchemes[i]].materials;
+            renderer.SetMaterials(materials);
         }
     }
     #endregion

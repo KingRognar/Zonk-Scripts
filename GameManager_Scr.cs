@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -24,9 +23,6 @@ public class GameManager_Scr : NetworkBehaviour
 
     private List<Vector3> spawnPositions = new() {
         new Vector3 (0,0,-30), new Vector3 (0,0,30), new Vector3 (30,0,0), new Vector3(-30,0,0)};
-
-    //TODO: нада придумать как получше загружать необходимые маериалы, сейчас я тупа гружу все через едиотр
-    [SerializeField] private List<DiceMaterialSetSO_Scr> diceMaterialSets; 
 
     private void Awake()
     {
@@ -89,31 +85,10 @@ public class GameManager_Scr : NetworkBehaviour
 
         newPlayer.GetComponent<NetworkObject>().SpawnWithOwnership(clientId);
 
-        LoadDiceColoringSchemes(dices);
         //CreateBackRefs(newPlayer, cupScr, dicesScr);
         //SetInitialPositions(newPlayer, cupScr, dicesScr);
     }
-    private void LoadDiceColoringSchemes(List<GameObject> dices)
-    {
-        //TODO: нада придумать как получше загружать необходимые маериалы, сейчас я тупа гружу все через едиотр
 
-        string saveFilePath = Application.persistentDataPath + "/diceColoring.json";
-        int[] dicesColoringSchemeIds = new int[6] { 0, 0, 0, 0, 0, 0 };
-
-
-        if (File.Exists(saveFilePath))
-        {
-            string jsonString = File.ReadAllText(saveFilePath);
-            dicesColoringSchemeIds = JsonUtility.FromJson<IntArrayWrapper>(jsonString).intArray;
-        }
-
-        for (int i = 0; i < 6; i++)
-        {
-            Renderer renderer = dices[i].GetComponent<Renderer>();
-            List<Material> materials = diceMaterialSets[dicesColoringSchemeIds[i]].materials;
-            renderer.SetMaterials(materials);
-        }
-    }
 
     
     [Rpc(SendTo.Server)]
