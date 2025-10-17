@@ -25,6 +25,10 @@ public class NetworkManager_Scr : MonoBehaviour
 
     public ulong hostId;
 
+
+    //TODO: присоединение к начавшейся игре
+
+
     private void Awake()
     {
         if (instance == null)
@@ -97,6 +101,7 @@ public class NetworkManager_Scr : MonoBehaviour
             else
                 hostGameUI.GetComponent<UIDocument>().rootVisualElement.style.display = DisplayStyle.Flex;
             mainMenuUI.GetComponent<UIDocument>().rootVisualElement.style.display = DisplayStyle.None;
+            hostGameUI.EnableStartGameBtn(false);
 
             Debug.Log("Joined lobby from friends list");
         }
@@ -232,6 +237,9 @@ public class NetworkManager_Scr : MonoBehaviour
         Debug.Log("Singleton_OnServerStarted");
     }
 
-
+    public void SetCurrentLobby(Lobby lobby)
+    {
+        currentLobby = lobby;
+    }
 
 }

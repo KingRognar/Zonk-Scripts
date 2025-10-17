@@ -45,4 +45,12 @@ public class UI_HostGame_Scr : MonoBehaviour
         doc.rootVisualElement.style.display = DisplayStyle.None;
     }
     #endregion
+
+    public void EnableStartGameBtn(bool toEnable)
+    {
+        if (toEnable)
+            buttons[0].style.display = DisplayStyle.Flex;
+        else
+            buttons[0].style.display = DisplayStyle.None;
+    }
 }

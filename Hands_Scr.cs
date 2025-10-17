@@ -1,3 +1,4 @@
+using Unity.Netcode.Components;
 using UnityEngine;
 using UnityEngine.Animations.Rigging;
 

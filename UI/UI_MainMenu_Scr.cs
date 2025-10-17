@@ -51,6 +51,7 @@ public class UI_MainMenu_Scr : MonoBehaviour
         else
             hostGameUI.GetComponent<UIDocument>().rootVisualElement.style.display = DisplayStyle.Flex;
         doc.rootVisualElement.style.display = DisplayStyle.None;
+        hostGameUI.EnableStartGameBtn(true);
     }
     private void JoinGameClick(ClickEvent click)
     {

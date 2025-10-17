@@ -13,6 +13,7 @@ public class UI_JoinGame_Scr : MonoBehaviour
     private Button searchBtn;
 
     [SerializeField] private UI_MainMenu_Scr mainMenuUI;
+    [SerializeField] private UI_HostGame_Scr hostGameUI;
 
     [SerializeField] private VisualTreeAsset lobbyVTA;
 
@@ -59,13 +60,31 @@ public class UI_JoinGame_Scr : MonoBehaviour
     }
 
 
-    private void JoinClick(ClickEvent click)
+    private async void JoinClick(ClickEvent click)
     {
         Button btn = click.target as Button;
         int lobbyID = scrollView.IndexOf(btn.parent);
-        //Debug.Log(lobbyID);
-        foundLobbies[lobbyID].Join();
-        //TODO: надо посмотреть что будет дальше
+
+        RoomEnter joinedLobby = await foundLobbies[lobbyID].Join();
+        if (joinedLobby != RoomEnter.Success)
+        {
+            //TODO: добавить какую-то обратную реакцию
+
+            Debug.Log("Failed to join lobby from lobby list");
+        }
+        else
+        {
+            NetworkManager_Scr.instance.SetCurrentLobby(foundLobbies[lobbyID]);
+
+            if (!hostGameUI.isActiveAndEnabled)
+                hostGameUI.gameObject.SetActive(true);
+            else
+                hostGameUI.GetComponent<UIDocument>().rootVisualElement.style.display = DisplayStyle.Flex;
+            doc.rootVisualElement.style.display = DisplayStyle.None;
+            hostGameUI.EnableStartGameBtn(false);
+            
+            Debug.Log("Joined lobby from lobby");
+        }
     }
     private void SearchClick(ClickEvent click)
     {

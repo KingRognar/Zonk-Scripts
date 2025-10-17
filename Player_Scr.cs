@@ -569,6 +569,8 @@ public class Player_Scr : NetworkBehaviour
         RigBuilder rigBuilder = isRightHand ? hands.rightHandRigBuilder : hands.leftHandRigBuilder;
 
         Vector3 endPos = isRightHand ? hands.rightHandStartPos : hands.leftHandStartPos;
+
+
         Quaternion endRot = isRightHand ? Quaternion.Euler(-90, 0, 145) : Quaternion.Euler(90, 0, 145);//hands.leftHandTarget.rotation;
         //endRot = endRot * Quaternion.FromToRotation(new Vector3(1, 0, 1).normalized, Vector3.forward);
 
@@ -576,12 +578,20 @@ public class Player_Scr : NetworkBehaviour
 
         Sequence sequence = DOTween.Sequence(this);
         sequence.Append(handTarget.DOMove(endPos, 0.5f));
-        sequence.Insert(0, handTarget.DORotateQuaternion(endRot, 0.5f));
+
+        Vector3 endVec = isRightHand ? transform.up : -transform.up;
+
+        endRot = isRightHand ? Quaternion.LookRotation(endVec, transform.forward) : Quaternion.LookRotation(endVec, -transform.forward);
+        endRot = endRot * Quaternion.AngleAxis(-30, transform.forward);
+
+        sequence.Insert(0, handTarget.DOLocalRotateQuaternion(endRot, 0.5f));
+        //sequence.Insert(0, handTarget.DORotateQuaternion(endRot, 0.5f));
+
         //hands.rightHandTarget.DOLocalRotateQuaternion
         //sequence.Insert(0, hands.rightHandTarget.DORotate(new Vector3(0, 55, 90), 0.5f));
         sequence.AppendCallback(() => {
-            WeightedTransformArray weightedTransforms = new WeightedTransformArray();
-            weightedTransforms.Add(new WeightedTransform(cup.transform, 1));
+            //WeightedTransformArray weightedTransforms = new WeightedTransformArray();
+            //weightedTransforms.Add(new WeightedTransform(cup.transform, 1));
             handMPC.data.sourceObjects.Clear();
             rigBuilder.Build();
             handMPC.weight = 0;
