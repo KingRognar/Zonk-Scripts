@@ -430,23 +430,24 @@ public class Player_Scr : NetworkBehaviour
     //TODO: сделать имена по умному
     //TODO: вычислять endPos endRot и targetOffset в зависимости от позиции игрока
     //TODO: прикрутить slerp или curve
+    //TODO: сделать анимашку возвращения стакана на место
     private void HandGrabCupSequence(bool isRightHand)
     {
         Transform handTarget = isRightHand ? hands.rightHandTarget : hands.leftHandTarget;
         MultiPositionConstraint handMPC = isRightHand ? hands.rightHandMPC : hands.leftHandMPC;
         RigBuilder rigBuilder = isRightHand ? hands.rightHandRigBuilder : hands.leftHandRigBuilder;
 
-        //TODO: позиция в зависимости от положения игрока
         //TODO: двигаться по кривой
-        Vector3 targetOffset = isRightHand ? new(5.2f, 2, 0) : new(-5.2f, 2, 0);
+        Vector3 targetOffset = GetHandOffsetPosition(isRightHand, new Vector3(5.2f, 2, 0));
         Vector3 endPos = cup.transform.position + targetOffset;
-        Vector3 endRot = isRightHand ? new(5, 60, 90) : new(-5, 120, -90);
+
+        Quaternion endRot = GetHandInitRotation(isRightHand);
+        endRot = endRot * Quaternion.AngleAxis(-30, transform.forward) * Quaternion.AngleAxis(-95, transform.up);
 
         Sequence sequence = DOTween.Sequence(this);
         sequence.Append(handTarget.DOMove(endPos, 0.5f));
-        sequence.Insert(0, handTarget.DORotate(endRot, 0.5f));
+        sequence.Insert(0, handTarget.DOLocalRotateQuaternion(endRot, 0.5f));
         sequence.InsertCallback(0.35f, () => {
-            //hands.PlayHandGrabAnimation(isRightHand);
             hands.AnimatorSetBool("Grab", isRightHand);
         });
 
@@ -464,14 +465,15 @@ public class Player_Scr : NetworkBehaviour
         Transform handTarget = isRightHand ? hands.rightHandTarget : hands.leftHandTarget;
         MultiPositionConstraint handMPC = isRightHand ? hands.rightHandMPC : hands.leftHandMPC;
 
-        Vector3 targetOffset = isRightHand ? new Vector3(1, -2, 0) : new(-1, -2, 0);
-        Vector3 endRot = isRightHand ? new(-5, 90, 0) : new(5, 90, 180);
+        Vector3 targetOffset = GetHandOffsetPosition(isRightHand, new Vector3(1, -2, 0));
 
-        //hands.PlayHandGrab2Animation(isRightHand);
+        Quaternion endRot = GetHandInitRotation(isRightHand);
+        endRot = endRot * GetHandLocalRotation(90, -90, 0);
+
         hands.AnimatorSetBool("ChangeGrab", isRightHand);
         Sequence sequence = DOTween.Sequence(this);
         sequence.Append(DOTween.To(() => handMPC.data.offset, x => handMPC.data.offset = x, targetOffset, 0.2f));
-        sequence.Insert(0, handTarget.DORotate(endRot, 0.5f));
+        sequence.Insert(0, handTarget.DOLocalRotateQuaternion(endRot, 0.5f));
     }
     private Sequence HandCoverCupSequence(bool isRightHand)
     {
@@ -479,15 +481,16 @@ public class Player_Scr : NetworkBehaviour
         MultiPositionConstraint handMPC = isRightHand ? hands.rightHandMPC : hands.leftHandMPC;
         RigBuilder rigBuilder = isRightHand ? hands.rightHandRigBuilder : hands.leftHandRigBuilder;
 
-        //TODO: позиция в зависимости от положения игрока
-        //TODO: двигаться по кривой
-        Vector3 targetOffset = isRightHand ? new(3.4f, 9.4f, 0) : new(-3.4f, 9.4f, 0);
+
+        Vector3 targetOffset = GetHandOffsetPosition(isRightHand, new Vector3(3.4f, 9.4f, 0));
         Vector3 endPos = cup.transform.position + targetOffset;
-        Vector3 endRot = isRightHand ? new(-90, 90, 0) : new(90, -90, 0);
+
+        Quaternion endRot = GetHandInitRotation(isRightHand);
+        endRot = endRot * GetHandLocalRotation(0, 0, -90);
 
         Sequence sequence = DOTween.Sequence(this);
         sequence.Append(handTarget.DOJump(endPos, 2f, 1, 0.5f));
-        sequence.Insert(0, handTarget.DORotate(endRot, 0.5f));
+        sequence.Insert(0, handTarget.DOLocalRotateQuaternion(endRot, 0.5f));
         sequence.InsertCallback(0.35f, () => {
             //hands.PlayHandCoverAnimation(isRightHand);
             hands.AnimatorSetBool("Cover", isRightHand);
@@ -517,13 +520,16 @@ public class Player_Scr : NetworkBehaviour
         Transform handTarget = isRightHand ? hands.rightHandTarget : hands.leftHandTarget;
         MultiPositionConstraint handMPC = isRightHand ? hands.rightHandMPC : hands.leftHandMPC;
 
-        Vector3 targetOffset = isRightHand ? new Vector3(9.4f, -3.4f, 0) : new(-9.4f, -3.4f, 0);
-        Vector3 endRot = isRightHand ? new(0, 90, 0) : new(180, -90, 0);
+        Vector3 targetOffset = GetHandOffsetPosition(isRightHand, new Vector3(9.4f, -3.4f, 0));
+
+        Quaternion endRot = GetHandInitRotation(isRightHand);
+        endRot = endRot * GetHandLocalRotation(90, -90, 0);
 
         Sequence sequence = DOTween.Sequence(this);
         sequence.Append(DOTween.To(() => handMPC.data.offset, x => handMPC.data.offset = x, targetOffset, 0.2f));
-        sequence.Insert(0, handTarget.DORotate(endRot, 0.5f));
+        sequence.Insert(0, handTarget.DOLocalRotateQuaternion(endRot, 0.5f));
     }
+    //TODO: next
     public void HandOverturnCupSequence(bool isRightHand)
     {
         Transform handTarget = isRightHand ? hands.rightHandTarget : hands.leftHandTarget;
@@ -568,34 +574,44 @@ public class Player_Scr : NetworkBehaviour
         MultiPositionConstraint handMPC = isRightHand ? hands.rightHandMPC : hands.leftHandMPC;
         RigBuilder rigBuilder = isRightHand ? hands.rightHandRigBuilder : hands.leftHandRigBuilder;
 
+        hands.AnimatorResetAllBool(isRightHand);
+
         Vector3 endPos = isRightHand ? hands.rightHandStartPos : hands.leftHandStartPos;
 
-
-        Quaternion endRot = isRightHand ? Quaternion.Euler(-90, 0, 145) : Quaternion.Euler(90, 0, 145);//hands.leftHandTarget.rotation;
-        //endRot = endRot * Quaternion.FromToRotation(new Vector3(1, 0, 1).normalized, Vector3.forward);
-
-        hands.AnimatorResetAllBool(isRightHand);
+        Quaternion endRot = isRightHand ? Quaternion.LookRotation(transform.up, transform.forward) : Quaternion.LookRotation(-transform.up, -transform.forward);
+        endRot = endRot * Quaternion.AngleAxis(-30, transform.forward);
 
         Sequence sequence = DOTween.Sequence(this);
         sequence.Append(handTarget.DOMove(endPos, 0.5f));
-
-        Vector3 endVec = isRightHand ? transform.up : -transform.up;
-
-        endRot = isRightHand ? Quaternion.LookRotation(endVec, transform.forward) : Quaternion.LookRotation(endVec, -transform.forward);
-        endRot = endRot * Quaternion.AngleAxis(-30, transform.forward);
-
         sequence.Insert(0, handTarget.DOLocalRotateQuaternion(endRot, 0.5f));
-        //sequence.Insert(0, handTarget.DORotateQuaternion(endRot, 0.5f));
-
-        //hands.rightHandTarget.DOLocalRotateQuaternion
-        //sequence.Insert(0, hands.rightHandTarget.DORotate(new Vector3(0, 55, 90), 0.5f));
         sequence.AppendCallback(() => {
-            //WeightedTransformArray weightedTransforms = new WeightedTransformArray();
-            //weightedTransforms.Add(new WeightedTransform(cup.transform, 1));
             handMPC.data.sourceObjects.Clear();
             rigBuilder.Build();
             handMPC.weight = 0;
         });
+    }
+    private Vector3 GetHandOffsetPosition(bool isRightHand, Vector3 offset)
+    {
+        Vector3 ret;
+
+        if (isRightHand)
+            ret = transform.right * offset.x + transform.up * offset.y + transform.forward * offset.z;
+        else
+            ret = transform.right * -offset.x + transform.up * offset.y + transform.forward * offset.z;
+
+        return ret;
+    }
+    private Quaternion GetHandInitRotation(bool isRightHand)
+    {
+        return isRightHand ? Quaternion.LookRotation(transform.up, transform.forward) : Quaternion.LookRotation(-transform.up, -transform.forward);
+    }
+    private Quaternion GetHandLocalRotation(Vector3 euler)
+    {
+        return Quaternion.AngleAxis(euler.x, transform.right) * Quaternion.AngleAxis(euler.y, transform.up) * Quaternion.AngleAxis(euler.z, transform.forward);
+    }
+    private Quaternion GetHandLocalRotation(float x, float y, float z)
+    {
+        return Quaternion.AngleAxis(x, transform.right) * Quaternion.AngleAxis(y, transform.up) * Quaternion.AngleAxis(z, transform.forward);
     }
     #endregion
 
