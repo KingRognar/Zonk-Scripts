@@ -22,7 +22,7 @@ public class GameManager_Scr : NetworkBehaviour
     //TODO: прибраться
 
     private List<Vector3> spawnPositions = new() {
-        new Vector3 (0,0,-30), new Vector3 (0,0,30), new Vector3 (30,0,0), new Vector3(-30,0,0)};
+        new Vector3 (0,0,30), new Vector3 (0,0,30), new Vector3 (30,0,0), new Vector3(-30,0,0)};
 
     private void Awake()
     {
@@ -55,6 +55,7 @@ public class GameManager_Scr : NetworkBehaviour
 
         Vector3 spawnPos = spawnPositions[id];
         Player_Scr newPlayer = Instantiate(playerPref, spawnPos, Quaternion.identity).GetComponent<Player_Scr>();
+        newPlayer.transform.rotation *= Quaternion.LookRotation(-spawnPos, Vector3.up);
         listOfPlayers.Add(newPlayer);
 
 

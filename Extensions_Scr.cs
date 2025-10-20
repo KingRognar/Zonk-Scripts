@@ -64,8 +64,6 @@ public static class Extensions_Scr
             vector = Quaternion.FromToRotation(-playerTrans.position.normalized, Vector3.forward) * vector;
         result = playerTrans.position + vector;
 
-
-        Debug.Log(result);
         return result;
     }
     public static Vector3 GetOppositeOffset(this Player_Scr player, Vector3 curPosition, float offset)

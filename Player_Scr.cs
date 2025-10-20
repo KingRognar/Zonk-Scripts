@@ -354,9 +354,12 @@ public class Player_Scr : NetworkBehaviour
     }
     private void CheckWhichHandToAnimate()
     {
-        startAnimWithRightHand = cup.transform.position.x > 0 ? true : false;
-
-        //TODO:
+        Vector3 cupLoaclPos = cup.transform.localPosition;
+        startAnimWithRightHand = cupLoaclPos.x > 0;
+        if (startAnimWithRightHand)
+            Debug.Log("правая рука " + cupLoaclPos);
+        else
+            Debug.Log("левая рука " + cupLoaclPos);
     }
     private void DiceCupSequence(Dice_Scr dice,int i, bool addLastCallback)
     {
@@ -438,11 +441,17 @@ public class Player_Scr : NetworkBehaviour
         RigBuilder rigBuilder = isRightHand ? hands.rightHandRigBuilder : hands.leftHandRigBuilder;
 
         //TODO: двигаться по кривой
-        Vector3 targetOffset = GetHandOffsetPosition(isRightHand, new Vector3(5.2f, 2, 0));
+        Vector3 mpcOffset = new Vector3(5.2f, 2, 0);
+        Vector3 targetOffset = GetHandOffsetPosition(isRightHand, mpcOffset);
         Vector3 endPos = cup.transform.position + targetOffset;
 
+        Debug.Log(transform.right);
+        Debug.Log(transform.up);
+        Debug.Log(transform.forward);
+
         Quaternion endRot = GetHandInitRotation(isRightHand);
-        endRot = endRot * Quaternion.AngleAxis(-30, transform.forward) * Quaternion.AngleAxis(-95, transform.up);
+        //endRot = endRot * GetHandLocalRotation(0, 0, 180);
+        //endRot = endRot * Quaternion.AngleAxis(-30, transform.forward) * Quaternion.AngleAxis(-95, transform.up);
 
         Sequence sequence = DOTween.Sequence(this);
         sequence.Append(handTarget.DOMove(endPos, 0.5f));
@@ -455,7 +464,7 @@ public class Player_Scr : NetworkBehaviour
             WeightedTransformArray weightedTransforms = new WeightedTransformArray();
             weightedTransforms.Add(new WeightedTransform(cup.transform, 1));
             handMPC.data.sourceObjects = weightedTransforms;
-            handMPC.data.offset = targetOffset;
+            handMPC.data.offset = mpcOffset;
             rigBuilder.Build();
             handMPC.weight = 1;
         });
@@ -603,7 +612,8 @@ public class Player_Scr : NetworkBehaviour
     }
     private Quaternion GetHandInitRotation(bool isRightHand)
     {
-        return isRightHand ? Quaternion.LookRotation(transform.up, transform.forward) : Quaternion.LookRotation(-transform.up, -transform.forward);
+        Debug.Log(Quaternion.LookRotation(Vector3.up, Vector3.forward).eulerAngles);
+        return isRightHand ? Quaternion.LookRotation(Vector3.up, Vector3.forward) : Quaternion.LookRotation(-Vector3.up, -Vector3.forward);
     }
     private Quaternion GetHandLocalRotation(Vector3 euler)
     {
@@ -611,7 +621,7 @@ public class Player_Scr : NetworkBehaviour
     }
     private Quaternion GetHandLocalRotation(float x, float y, float z)
     {
-        return Quaternion.AngleAxis(x, transform.right) * Quaternion.AngleAxis(y, transform.up) * Quaternion.AngleAxis(z, transform.forward);
+        return Quaternion.AngleAxis(x, Vector3.right) * Quaternion.AngleAxis(y, Vector3.up) * Quaternion.AngleAxis(z, Vector3.forward);
     }
     #endregion
 
