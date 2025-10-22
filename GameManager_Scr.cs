@@ -22,7 +22,7 @@ public class GameManager_Scr : NetworkBehaviour
     //TODO: прибраться
 
     private List<Vector3> spawnPositions = new() {
-        new Vector3 (0,0,30), new Vector3 (0,0,30), new Vector3 (30,0,0), new Vector3(-30,0,0)};
+        new Vector3 (0,0,-30), new Vector3 (0,0,30), new Vector3 (30,0,0), new Vector3(-30,0,0)};
 
     private void Awake()
     {

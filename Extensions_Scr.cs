@@ -58,11 +58,8 @@ public static class Extensions_Scr
         Vector3 result = Vector3.zero;
         Transform playerTrans = player.transform;
 
-        if (-playerTrans.position.normalized == -Vector3.forward)
-            vector = -vector;
-        else
-            vector = Quaternion.FromToRotation(-playerTrans.position.normalized, Vector3.forward) * vector;
-        result = playerTrans.position + vector;
+        result = playerTrans.right * vector.x + playerTrans.up * vector.y + playerTrans.forward * vector.z;
+        result = playerTrans.position + result;
 
         return result;
     }
@@ -79,5 +76,16 @@ public static class Extensions_Scr
         return result;
     }
 
-
+    public static void GizmoPointer(this Transform transform, Vector3 position)
+    {
+        Debug.DrawLine(position, position + Vector3.right, Color.red);
+        Debug.DrawLine(position, position + Vector3.up, Color.green);
+        Debug.DrawLine(position, position + Vector3.forward, Color.blue);
+    }
+    public static void GizmoPointer(this Transform transform, Vector3 position, float duration)
+    {
+        Debug.DrawLine(position, position + Vector3.right, Color.red, duration);
+        Debug.DrawLine(position, position + Vector3.up, Color.green, duration);
+        Debug.DrawLine(position, position + Vector3.forward, Color.blue, duration);
+    }
 }
