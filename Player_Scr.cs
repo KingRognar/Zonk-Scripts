@@ -12,7 +12,7 @@ using UnityEngine.UI;
 using static Extensions_Scr;
 using Sequence = DG.Tweening.Sequence;
 
-public class Player_Scr : NetworkBehaviour
+public class Player_Scr : BasePlayer_Scr
 {
     //References to other objects
     [SerializeField] public Cup_Scr cup;
@@ -53,11 +53,10 @@ public class Player_Scr : NetworkBehaviour
     private int rejectionSamples = 30;
     //private float displayRadius = 1.4f;
 
-    private float initTimer;
-    private bool notInit = true;
-
     Dictionary<ulong, NetworkObject> netObjects;
 
+
+    bool isShowingGest = false;
     //TODO: прибраться
     //TODO: писать ли скор, когда выбраны лишние дайсы?
     //TODO: как-то обозначить первый бросок
@@ -85,6 +84,19 @@ public class Player_Scr : NetworkBehaviour
         {
             //SetSpecialValues();
         }
+        if (Input.GetKeyDown(KeyCode.G) && cup.state == Cup_Scr.CupState.empty)
+        {
+            HandShowFck(true);
+        }
+        if (isShowingGest)
+        {
+            hands.rightHandTarget.position = Vector3.Lerp(hands.rightHandTarget.position, cup.GetPosOnPlane(), 10 * Time.deltaTime);
+        }
+        if (Input.GetKeyUp(KeyCode.G))
+        {
+            isShowingGest = false;
+            HandResetSequence(true);
+        }
     }
     private void SetSpecialValues()
     {
@@ -99,10 +111,9 @@ public class Player_Scr : NetworkBehaviour
 
 
     #region Init
-    public void Initialize()
+    protected override void Initialize()
     {
         netObjects = NetworkManager.Singleton.SpawnManager.SpawnedObjects;
-        notInit = !notInit;
 
         SetupCamera();
         SetupUI();
@@ -112,8 +123,6 @@ public class Player_Scr : NetworkBehaviour
 
         UpdateScore();
         UpdateTurnScore();
-
-        notInit = false;
 
         if (OwnerClientId == 0) isMyTurn = true; 
     }
@@ -176,7 +185,7 @@ public class Player_Scr : NetworkBehaviour
         Camera.main.tag = "Untagged";
         newCamTrans.tag = "MainCamera";
     }
-    private void SetupCupAndDices()
+    protected override void SetupCupAndDices()
     {
         ulong clientCupId = 4 + (NetworkManager.Singleton.LocalClientId * 9);
         NetworkObject netCup;
@@ -223,7 +232,7 @@ public class Player_Scr : NetworkBehaviour
             diceSet[i].id = i++;
         }*/
     }
-    private void SetupHands()
+    protected override void SetupHands()
     {
         /*if (!transform.GetChild(1).TryGetComponent<Hands_Scr>(out hands))
             Debug.Log("не получилось взять реф рук", this);*/
@@ -237,39 +246,7 @@ public class Player_Scr : NetworkBehaviour
         hands = netHands.GetComponent<Hands_Scr>();
         hands.transform.parent = transform;
     }
-    private void SetInitialPositions()
-    {
-        /*if (!IsOwner)
-            return;*/
 
-        //CUP
-        //Vector3 vectorA = -transform.position.normalized;
-        //Vector3 vectorB = Vector3.up;
-        //Vector3 posOffset = Vector3.Cross(vectorA, vectorB) * 10f;
-
-        cup.transform.position = this.GetPositionRelativeToPlayer(new Vector3(10,0,0));
-        cup.Initialization();
-        //DICES
-        //posOffset = -posOffset;
-        diceDropPos = this.GetPositionRelativeToPlayer(new Vector3(-10,0,0)) + new Vector3(0, 3, 0);
-        Vector2 regionSize = Vector2.one * 8f;
-        List<Vector2> diceOffsets;
-        int tries = 10;
-
-        do
-        {
-            diceOffsets = PoissonDiscSampling_Scr.GeneratePoints(2.83f, regionSize, 30);
-        } while (diceOffsets.Count < 6 && tries-- > 0);
-
-        for (int i = 0; i < 6; i++)
-        {
-            Vector3 dicePos = this.GetPositionRelativeToPlayer(new Vector3(-10, 0, 0));
-            dicePos += new Vector3(diceOffsets[i].x - regionSize.x / 2, 0, diceOffsets[i].y - regionSize.y / 2);
-
-            diceSet[i].transform.position = dicePos + new Vector3(0, 1, 0);
-            RollDice(diceSet[i].transform);
-        }
-    }
     private void LoadDiceColoringSchemes()
     {
         //TODO: нада придумать как получше загружать необходимые маериалы, сейчас я тупа гружу все через едиотр
@@ -635,6 +612,19 @@ public class Player_Scr : NetworkBehaviour
     }
     #endregion
 
+    private void HandShowFck(bool isRightHand)
+    {
+        Transform handTarget = isRightHand ? hands.rightHandTarget : hands.leftHandTarget;
+
+        hands.AnimatorSetBool("Fck", isRightHand);
+        isShowingGest = true;
+
+        Quaternion endRot = GetHandInitRotation(isRightHand);
+        endRot = endRot * GetHandLocalRotation(90, -180, 45);
+
+        handTarget.DOLocalRotateQuaternion(endRot, 0.5f);
+    }
+
     #region Score Calcs
     private void CalculateSelectedDices()
     {
@@ -827,12 +817,6 @@ public class Player_Scr : NetworkBehaviour
             RollDice(diceToRoll[i].transform);
         CalculateSelectedDices();
     }
-    public void RollDice(Transform diceTrans)
-    {
-        diceTrans.up = diceTrans.GetRandomDirection();
-        diceTrans.RotateAround(diceTrans.position, Vector3.up, Random.Range(0f, 360f));
-        //Debug.Log(diceTrans.up, diceTrans.gameObject);
-    }
     private void DisableSelectedDices()
     {
         foreach (Dice_Scr dice in diceSelected)
@@ -955,7 +939,7 @@ public class Player_Scr : NetworkBehaviour
         isMyTurn = false;
         uiRefs.yourTurnSign.gameObject.SetActive(false);
 
-        GameManager_Scr.instance.PlayerTurnEndRpc();
+        GameManager_Scr.instance.PlayerTurnEndRpc(NetworkObject.OwnerClientId, score);
     }
     [Rpc(SendTo.SpecifiedInParams)]
     public void PlayerTurnStartRpc(RpcParams rpcParams)

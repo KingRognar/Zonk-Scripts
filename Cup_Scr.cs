@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Cup_Scr : NetworkBehaviour
 {
-    [HideInInspector] public Player_Scr player;
+    [HideInInspector] public BasePlayer_Scr player;
 
     private Plane plane;
     //Tween movementTween;
@@ -64,17 +64,11 @@ public class Cup_Scr : NetworkBehaviour
         if (!isRotated)
             RotateCup();
 
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        float dist;
-        bool isHit = plane.Raycast(ray, out dist);
-        newPos = ray.GetPoint(dist);
-
-        Debug.DrawLine(Camera.main.transform.position, newPos);
-        transform.GizmoPointer(newPos);
+        newPos = GetPosOnPlane();
 
         transform.position = Vector3.Lerp(transform.position, newPos, Time.deltaTime * 16f);
 
-        if (!boundaries.initialized) 
+        if (!boundaries.initialized)
             boundaries.SetupBoundaries(plane, player.transform, -14, 14, 0, 17);
         transform.position = boundaries.ClampPointToBoundaries(transform.position);
 
@@ -105,7 +99,7 @@ public class Cup_Scr : NetworkBehaviour
     private void ResetCup()
     {
         player.DropDicesFromCup();
-        
+
         sequence = DOTween.Sequence();
 
         Vector3 playerPos = player.transform.position;
@@ -130,6 +124,13 @@ public class Cup_Scr : NetworkBehaviour
         isRotated = true;
     }
 
+    public Vector3 GetPosOnPlane()
+    {
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        float dist;
+        bool isHit = plane.Raycast(ray, out dist);
+        return ray.GetPoint(dist);
+    }
 
     public enum CupState
     {

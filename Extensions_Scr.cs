@@ -53,7 +53,7 @@ public static class Extensions_Scr
             default: return Vector3.zero;
         }
     }
-    public static Vector3 GetPositionRelativeToPlayer(this Player_Scr player, Vector3 vector)
+    public static Vector3 GetPositionRelativeToPlayer(this BasePlayer_Scr player, Vector3 vector)
     {
         Vector3 result = Vector3.zero;
         Transform playerTrans = player.transform;
@@ -63,7 +63,7 @@ public static class Extensions_Scr
 
         return result;
     }
-    public static Vector3 GetOppositeOffset(this Player_Scr player, Vector3 curPosition, float offset)
+    public static Vector3 GetOppositeOffset(this BasePlayer_Scr player, Vector3 curPosition, float offset)
     {
         Vector3 result = Vector3.zero;
         Transform playerTrans = player.transform;

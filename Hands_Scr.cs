@@ -30,6 +30,7 @@ public class Hands_Scr : MonoBehaviour
         animator.SetBool("Cover", false);
         animator.SetBool("Dice", false);
         animator.SetBool("Free", false);
+        animator.SetBool("Fck", false);
     }
     public void AnimatorSetBool(string boolName, bool isRightHand = true)
     {

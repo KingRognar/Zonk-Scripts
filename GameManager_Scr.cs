@@ -16,6 +16,9 @@ public class GameManager_Scr : NetworkBehaviour
     [Space(10)]
     [SerializeField] private List<Player_Scr> listOfPlayers = new();
     [SerializeField] private int playerTurn = 0;
+    [SerializeField] private int[] playerScores = new int[4];
+    private int maxScore = 4000; //TODO: sync it
+
 
     private NetworkManager netMan;
 
@@ -93,8 +96,15 @@ public class GameManager_Scr : NetworkBehaviour
 
     
     [Rpc(SendTo.Server)]
-    public void PlayerTurnEndRpc()
+    public void PlayerTurnEndRpc(ulong prevPlayerId, int score)
     {
+        playerScores[prevPlayerId] = score;
+        if (CheckScores())
+        {
+            EndGame(prevPlayerId); 
+            return;
+        }
+
         playerTurn++;
         if (playerTurn >= netMan.ConnectedClientsIds.Count) playerTurn = 0;
 
@@ -108,5 +118,16 @@ public class GameManager_Scr : NetworkBehaviour
 
         listOfPlayers[(int)nextTarget].PlayerTurnStartRpc(rpcParams);
     }
+    private bool CheckScores()
+    {
+        for (int i = 0; i < playerScores.Length; i++)
+            if (playerScores[i] >= maxScore)
+                return true;
 
+        return false;
+    }
+    private void EndGame(ulong winnerId)
+    {
+        //TODO: показать всем кто выиграл
+    }
 }
