@@ -26,12 +26,6 @@ public class GameManager_Scr : NetworkBehaviour
 
     private List<Vector3> spawnPositions = new() {
         new Vector3 (0,0,-30), new Vector3 (0,0,30), new Vector3 (30,0,0), new Vector3(-30,0,0)};
-
-    private void Awake()
-    {
-        netMan = NetworkManager.Singleton;
-        netMan.SceneManager.OnLoadEventCompleted += Middleman;
-    }
     private void Start()
     {
         //netMan.OnClientConnectedCallback += Middlenman;
@@ -39,6 +33,16 @@ public class GameManager_Scr : NetworkBehaviour
         if (instance == null) instance = this;
     }
 
+    public void Subscribe()
+    {
+        if (NetworkManager.Singleton != null)
+        {
+            netMan = NetworkManager.Singleton;
+            netMan.SceneManager.OnLoadEventCompleted += Middleman;
+        }
+        else
+            Debug.Log("Отсутстувет NetManager");
+    }
     public void Middleman(string sceneName, LoadSceneMode loadSceneMode, List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
     {
         Debug.Log("тут2");
@@ -92,7 +96,6 @@ public class GameManager_Scr : NetworkBehaviour
         //CreateBackRefs(newPlayer, cupScr, dicesScr);
         //SetInitialPositions(newPlayer, cupScr, dicesScr);
     }
-
 
     
     [Rpc(SendTo.Server)]

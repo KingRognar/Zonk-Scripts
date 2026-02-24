@@ -35,6 +35,7 @@ public class UI_HostGame_Scr : MonoBehaviour
     private void StartGameClick(ClickEvent click)
     {
         Debug.Log("game started, loading scene");
+        GameManager_Scr.instance.Subscribe();
         NetworkManager.Singleton.SceneManager.LoadScene("SampleScene", LoadSceneMode.Single);
     }
     private void BackClick(ClickEvent click)

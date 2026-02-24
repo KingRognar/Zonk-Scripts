@@ -4,7 +4,7 @@ using UnityEngine;
 public class Dice_Scr : NetworkBehaviour
 {
     private Outline outline;
-    public BasePlayer_Scr player;
+    public Player_Scr player;
     public Transform leadTrans;
 
     public int id = -1; //TODO: мб надо сделать её нетворк вариабле

@@ -19,8 +19,6 @@ public class BottleWobble_Scr : MonoBehaviour
 
 
     //TODO: прибраться
-    //TODO: подымать fill в зависимости от пены
-
 
     void Start()
     {

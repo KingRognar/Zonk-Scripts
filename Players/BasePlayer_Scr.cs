@@ -8,8 +8,8 @@ using Sequence = DG.Tweening.Sequence;
 
 public abstract class BasePlayer_Scr : NetworkBehaviour
 {
+    #region Variables
     //References to other objects
-    [SerializeField] protected Cup_Scr cup;
     [SerializeField] protected List<Dice_Scr> diceSet = new();
     [SerializeField] protected Hands_Scr hands;
 
@@ -30,11 +30,11 @@ public abstract class BasePlayer_Scr : NetworkBehaviour
     protected int turnScore = 0;
     protected int tempScore = 0;
     protected bool combosExist = false;
-    protected bool rerollAvailable = true;
+    public bool rerollAvailable = true;
     protected bool all6 = false;
 
 
-    protected bool isMyTurn = false;
+    public bool isMyTurn = false;
 
     [HideInInspector] protected bool startAnimWithRightHand = true;
     protected Vector3 diceDropPos = Vector3.zero;
@@ -43,15 +43,18 @@ public abstract class BasePlayer_Scr : NetworkBehaviour
     protected float radius = 2.83f;
     protected Vector2 regionSize = Vector2.one * 8f;
     protected int rejectionSamples = 30;
+    #endregion
 
+    #region Init
     protected abstract void Initialize();
+    protected abstract void SetupUI();
     protected abstract void SetupCupAndDices();
     protected abstract void SetupHands();
     protected void SetInitialPositions()
     {
-        cup.transform.position = this.GetPositionRelativeToPlayer(new Vector3(10, 0, 0));
-        cup.Initialization();
-        diceDropPos = this.GetPositionRelativeToPlayer(new Vector3(-10, 0, 0)) + new Vector3(0, 3, 0);
+        //cup.transform.position = this.GetPositionRelativeToPlayer(new Vector3(10, 0, 0));
+        //cup.Initialization();
+        //diceDropPos = this.GetPositionRelativeToPlayer(new Vector3(-10, 0, 0)) + new Vector3(0, 3, 0);
         Vector2 regionSize = Vector2.one * 8f;
         List<Vector2> diceOffsets;
         int tries = 10;
@@ -63,19 +66,15 @@ public abstract class BasePlayer_Scr : NetworkBehaviour
 
         for (int i = 0; i < 6; i++)
         {
-            Vector3 dicePos = this.GetPositionRelativeToPlayer(new Vector3(-10, 0, 0));
-            dicePos += new Vector3(diceOffsets[i].x - regionSize.x / 2, 0, diceOffsets[i].y - regionSize.y / 2);
+            //Vector3 dicePos = this.GetPositionRelativeToPlayer(new Vector3(-10, 0, 0));
+            //dicePos += new Vector3(diceOffsets[i].x - regionSize.x / 2, 0, diceOffsets[i].y - regionSize.y / 2);
 
-            diceSet[i].transform.position = dicePos + new Vector3(0, 1, 0);
-            RollDice(diceSet[i].transform);
+            //diceSet[i].transform.position = dicePos + new Vector3(0, 1, 0);
+            //RollDice(diceSet[i].transform);
         }
     }
 
+    protected abstract void LoadDiceColoringSchemes();
+    #endregion
 
-
-    protected void RollDice(Transform diceTrans)
-    {
-        diceTrans.up = diceTrans.GetRandomDirection();
-        diceTrans.RotateAround(diceTrans.position, Vector3.up, Random.Range(0f, 360f));
-    }
 }

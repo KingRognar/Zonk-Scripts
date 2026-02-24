@@ -12,8 +12,9 @@ using UnityEngine.UI;
 using static Extensions_Scr;
 using Sequence = DG.Tweening.Sequence;
 
-public class Player_Scr : BasePlayer_Scr
+public class Player_Scr : NetworkBehaviour
 {
+    #region Varibles
     //References to other objects
     [SerializeField] public Cup_Scr cup;
     [SerializeField] private Transform canvasTrans;
@@ -41,7 +42,6 @@ public class Player_Scr : BasePlayer_Scr
     public bool rerollAvailable = true;
     private bool all6 = false;
 
-
     public bool isMyTurn = false;
 
     [HideInInspector] public bool startAnimWithRightHand = true;
@@ -55,14 +55,16 @@ public class Player_Scr : BasePlayer_Scr
 
     Dictionary<ulong, NetworkObject> netObjects;
 
-
     bool isShowingGest = false;
+    #endregion
+
     //TODO: прибраться
     //TODO: писать ли скор, когда выбраны лишние дайсы?
     //TODO: как-то обозначить первый бросок
     //TODO: не забыть с onClickEvent'ами разобраться - когда чашка стоит за кнопкой может получится так, что она сработает первее
     //TODO: синхронизация анимаций
     //TODO: двигать руку так чтоб было видно кубики
+    //TODO: до сих пор 6 выбранных кубиков не дают переброса
 
     //MIND: можно использовать rpc.notMe чтобы всех пингануть, чтобы они послали rpc тому кто пинганул что надо!!!
 
@@ -111,7 +113,7 @@ public class Player_Scr : BasePlayer_Scr
 
 
     #region Init
-    protected override void Initialize()
+    protected void Initialize()
     {
         netObjects = NetworkManager.Singleton.SpawnManager.SpawnedObjects;
 
@@ -126,7 +128,7 @@ public class Player_Scr : BasePlayer_Scr
 
         if (OwnerClientId == 0) isMyTurn = true; 
     }
-    private void SetupUI()
+    protected void SetupUI()
     {
         //Transform canvasTrans = GameObject.Find("Canvas").transform;
         //canvasTrans.GetChild(1).gameObject.SetActive(true);
@@ -175,7 +177,7 @@ public class Player_Scr : BasePlayer_Scr
         if (!IsOwner)
             return;
 
-        Vector3 camPos = this.GetPositionRelativeToPlayer(new Vector3(0, 0, -20)) + new Vector3(0, 20, 0);
+        Vector3 camPos = transform.GetPositionRelativeToPlayer(new Vector3(0, 0, -20)) + new Vector3(0, 20, 0);
 
         Transform newCamTrans = Instantiate(Camera.main, camPos, Quaternion.identity).transform;
         newCamTrans.rotation *= Quaternion.LookRotation(-transform.position, Vector3.up);
@@ -185,7 +187,7 @@ public class Player_Scr : BasePlayer_Scr
         Camera.main.tag = "Untagged";
         newCamTrans.tag = "MainCamera";
     }
-    protected override void SetupCupAndDices()
+    protected void SetupCupAndDices()
     {
         ulong clientCupId = 4 + (NetworkManager.Singleton.LocalClientId * 9);
         NetworkObject netCup;
@@ -232,7 +234,7 @@ public class Player_Scr : BasePlayer_Scr
             diceSet[i].id = i++;
         }*/
     }
-    protected override void SetupHands()
+    protected void SetupHands()
     {
         /*if (!transform.GetChild(1).TryGetComponent<Hands_Scr>(out hands))
             Debug.Log("не получилось взять реф рук", this);*/
@@ -246,8 +248,31 @@ public class Player_Scr : BasePlayer_Scr
         hands = netHands.GetComponent<Hands_Scr>();
         hands.transform.parent = transform;
     }
+    protected void SetInitialPositions()
+    {
+        cup.transform.position = transform.GetPositionRelativeToPlayer(new Vector3(10, 0, 0));
+        cup.Initialization();
+        diceDropPos = transform.GetPositionRelativeToPlayer(new Vector3(-10, 0, 0)) + new Vector3(0, 3, 0);
+        Vector2 regionSize = Vector2.one * 8f;
+        List<Vector2> diceOffsets;
+        int tries = 10;
 
-    private void LoadDiceColoringSchemes()
+        do
+        {
+            diceOffsets = PoissonDiscSampling_Scr.GeneratePoints(2.83f, regionSize, 30);
+        } while (diceOffsets.Count < 6 && tries-- > 0);
+
+        for (int i = 0; i < 6; i++)
+        {
+            Vector3 dicePos = transform.GetPositionRelativeToPlayer(new Vector3(-10, 0, 0));
+            dicePos += new Vector3(diceOffsets[i].x - regionSize.x / 2, 0, diceOffsets[i].y - regionSize.y / 2);
+
+            diceSet[i].transform.position = dicePos + new Vector3(0, 1, 0);
+            RollDice(diceSet[i].transform);
+        }
+    }
+
+    protected void LoadDiceColoringSchemes()
     {
         //TODO: нада придумать как получше загружать необходимые маериалы, сейчас я тупа гружу все через едиотр
 
@@ -306,6 +331,7 @@ public class Player_Scr : BasePlayer_Scr
         else
             diceToRoll = GetDiceSelected(false);
         cup.state = Cup_Scr.CupState.filling;
+        cup.dicesIn = diceToRoll.Count - 1;
 
         /*int i = 0;
         foreach (Dice_Scr dice in diceToRoll)
@@ -610,8 +636,6 @@ public class Player_Scr : BasePlayer_Scr
     {
         return Quaternion.AngleAxis(x, Vector3.right) * Quaternion.AngleAxis(y, Vector3.up) * Quaternion.AngleAxis(z, Vector3.forward);
     }
-    #endregion
-
     private void HandShowFck(bool isRightHand)
     {
         Transform handTarget = isRightHand ? hands.rightHandTarget : hands.leftHandTarget;
@@ -624,6 +648,7 @@ public class Player_Scr : BasePlayer_Scr
 
         handTarget.DOLocalRotateQuaternion(endRot, 0.5f);
     }
+    #endregion
 
     #region Score Calcs
     private void CalculateSelectedDices()
@@ -817,6 +842,11 @@ public class Player_Scr : BasePlayer_Scr
             RollDice(diceToRoll[i].transform);
         CalculateSelectedDices();
     }
+    protected void RollDice(Transform diceTrans)
+    {
+        diceTrans.up = diceTrans.GetRandomDirection();
+        diceTrans.RotateAround(diceTrans.position, Vector3.up, Random.Range(0f, 360f));
+    }
     private void DisableSelectedDices()
     {
         foreach (Dice_Scr dice in diceSelected)
@@ -833,12 +863,11 @@ public class Player_Scr : BasePlayer_Scr
             dice.ResetDie();
         }
     }
-    #endregion
-
     public void OnDiceSelectChange()
     {
         CalculateSelectedDices();
     }
+    #endregion
 
     #region UI Thingies
     private void UpdateTurnScore()
@@ -934,6 +963,7 @@ public class Player_Scr : BasePlayer_Scr
     }
     #endregion
 
+    #region TBS
     private void EndTurn()
     {
         isMyTurn = false;
@@ -949,6 +979,6 @@ public class Player_Scr : BasePlayer_Scr
 
         //TODO: добавить надпись что мой ход
     }
-
+    #endregion
 
 }

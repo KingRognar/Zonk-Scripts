@@ -13,8 +13,8 @@ public class UI_MainMenu_Scr : MonoBehaviour
 
     [SerializeField] private float zonkRotationAmplitude, zonkMoveAmplitude, zonkRotTime, zonkMovTime;
 
-    [SerializeField] private UI_HostGame_Scr hostGameUI;
-    [SerializeField] private UI_JoinGame_Scr joinGameUI;
+    [SerializeField] private UI_SinglePlayer_Scr SinglePlayerUI;
+    [SerializeField] private UI_Multiplayer_Scr MultiplayerUI;
     [SerializeField] private UI_DiceColoring_Scr diceColoringUI;
     [SerializeField] private UI_Rules_Scr rulesUI;
 
@@ -28,8 +28,8 @@ public class UI_MainMenu_Scr : MonoBehaviour
         /*foreach (Button button in buttons)
             Debug.Log(button.name);*/
 
-        buttons[0].RegisterCallback<ClickEvent>(HostGameClick); // Host
-        buttons[1].RegisterCallback<ClickEvent>(JoinGameClick); // Join
+        buttons[0].RegisterCallback<ClickEvent>(SinglePlayerClick); // Single
+        buttons[1].RegisterCallback<ClickEvent>(MultiplayerClick); // Multi
         buttons[2].RegisterCallback<ClickEvent>(DicesClick); // Dices
         buttons[3].RegisterCallback<ClickEvent>(OptionsClick); // Options
         buttons[4].RegisterCallback<ClickEvent>(RulesClick); // Rules
@@ -38,31 +38,23 @@ public class UI_MainMenu_Scr : MonoBehaviour
     private void Start()
     {
         AnimateZonk();
-        DisableOtherMenus();
     }
 
     #region Click Events
-    private void HostGameClick(ClickEvent click)
+    private void SinglePlayerClick(ClickEvent click)
     {
-        NetworkManager_Scr.instance.StartHost(4);
+        //TODO:
 
-        if (!hostGameUI.isActiveAndEnabled)
-            hostGameUI.gameObject.SetActive(true);
-        else
-            hostGameUI.GetComponent<UIDocument>().rootVisualElement.style.display = DisplayStyle.Flex;
-        doc.rootVisualElement.style.display = DisplayStyle.None;
-        hostGameUI.EnableStartGameBtn(true);
+        ModeSelector_Scr.instance.SelectSP();
     }
-    private void JoinGameClick(ClickEvent click)
+    private void MultiplayerClick(ClickEvent click)
     {
-        if (!joinGameUI.isActiveAndEnabled)
-            joinGameUI.gameObject.SetActive(true);
+        if (!MultiplayerUI.isActiveAndEnabled)
+            MultiplayerUI.gameObject.SetActive(true);
         else
-        {
-            joinGameUI.GetComponent<UIDocument>().rootVisualElement.style.display = DisplayStyle.Flex;
-            joinGameUI.SearchForLobbies();
-        }
+            MultiplayerUI.GetComponent<UIDocument>().rootVisualElement.style.display = DisplayStyle.Flex;
         doc.rootVisualElement.style.display = DisplayStyle.None;
+        ModeSelector_Scr.instance.SelectMP();
     }
     private void DicesClick(ClickEvent click)
     {
@@ -132,9 +124,5 @@ public class UI_MainMenu_Scr : MonoBehaviour
                 zonkLabel.style.translate = new StyleTranslate(new Translate(tempMov, 0));
             }).SetLoops(-1, LoopType.Yoyo).SetEase(Ease.InOutSine);
         });
-    }
-    private void DisableOtherMenus()
-    {
-        hostGameUI.gameObject.SetActive(false);
     }
 }

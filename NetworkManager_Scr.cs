@@ -33,7 +33,6 @@ public class NetworkManager_Scr : MonoBehaviour
     {
         if (instance == null)
         {
-            DontDestroyOnLoad(gameObject);
             instance = this;
         }
         else

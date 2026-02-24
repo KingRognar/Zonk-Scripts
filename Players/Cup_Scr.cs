@@ -1,10 +1,12 @@
+using System.Collections.Generic;
 using DG.Tweening;
+using NUnit.Framework;
 using Unity.Netcode;
 using UnityEngine;
 
 public class Cup_Scr : NetworkBehaviour
 {
-    [HideInInspector] public BasePlayer_Scr player;
+    [HideInInspector] public Player_Scr player;
 
     private Plane plane;
     //Tween movementTween;
@@ -17,6 +19,21 @@ public class Cup_Scr : NetworkBehaviour
     private bool isRotated = false;
 
     private Boundaries boundaries = new();
+
+    private float prevSpeed = 0, speed = 0;
+    [SerializeField] private float speedThreshold = 3f;
+    [SerializeField] private float shakeDelay = 0.1f;
+    private float lastShake = -1f;
+
+
+    public int dicesIn = -1;
+    [System.Serializable]
+    public struct AudioClips
+    {
+        [SerializeField] public List<AudioClip> clips;
+    }
+    [SerializeField] private List<AudioClips> shakingSfx;
+    [SerializeField] AudioClip cupOverturnSfx;
 
     private void OnMouseDown()
     {
@@ -33,7 +50,10 @@ public class Cup_Scr : NetworkBehaviour
         if (!IsOwner) return;
 
         if (state == CupState.filled)
+        {
             MoveCup();
+            ShakingSound();
+        }     
     }
     private void OnMouseUp()
     {
@@ -65,12 +85,16 @@ public class Cup_Scr : NetworkBehaviour
             RotateCup();
 
         newPos = GetPosOnPlane();
+        Vector3 oldPos = transform.position;
 
         transform.position = Vector3.Lerp(transform.position, newPos, Time.deltaTime * 16f);
 
         if (!boundaries.initialized)
             boundaries.SetupBoundaries(plane, player.transform, -14, 14, 0, 17);
         transform.position = boundaries.ClampPointToBoundaries(transform.position);
+
+        prevSpeed = speed;
+        speed = (transform.position - oldPos).magnitude;
 
     }
     private void OverturnCup()
@@ -90,9 +114,12 @@ public class Cup_Scr : NetworkBehaviour
         player.diceDropPos.y = 3;
 
         sequence = DOTween.Sequence();
-        sequence.Append(transform.DOMove(dropPos, 0.4f).SetEase(Ease.InBack));
-        sequence.Insert(0, transform.DORotateQuaternion(endRot, 0.4f).SetEase(Ease.InBack));
-        sequence.AppendCallback(() => { state = CupState.overturned; });
+        sequence.Append(transform.DOMove(dropPos, 0.4f).SetEase(Ease.InCirc));
+        sequence.Insert(0, transform.DORotateQuaternion(endRot, 0.4f).SetEase(Ease.InCirc));
+        sequence.AppendCallback(() => { 
+            state = CupState.overturned;
+            SoundManager_Scr.instance.PlaySingleSound(cupOverturnSfx, 1f, transform.position);
+        });
         //transform.position = Vector3.Lerp(transform.position, initialPos, Time.deltaTime * 2f);
         //transform.position = initialPos;
     }
@@ -103,7 +130,7 @@ public class Cup_Scr : NetworkBehaviour
         sequence = DOTween.Sequence();
 
         Vector3 playerPos = player.transform.position;
-        Vector3 newPos = player.transform.position + player.GetOppositeOffset(transform.position, 10f);
+        Vector3 newPos = player.transform.position + player.transform.GetOppositeOffset(transform.position, 10f);
 
         sequence.Append(transform.DOMove(newPos, 0.5f));
         sequence.Insert(0, transform.DORotate(new Vector3(0, 0, 0), 0.5f));
@@ -122,6 +149,24 @@ public class Cup_Scr : NetworkBehaviour
         player.HandChangeGrabSequence(player.startAnimWithRightHand);
         player.HandChangeCoverSequence(!player.startAnimWithRightHand);
         isRotated = true;
+    }
+
+    private void ShakingSound()
+    {
+        float difference = Mathf.Abs(prevSpeed - speed);
+        float volume = 1f * Mathf.InverseLerp(10, -5, difference);
+
+        if (difference > speedThreshold && Time.time > lastShake + shakeDelay)
+        {
+            if (dicesIn < 0) return;
+            List<AudioClip> clips = shakingSfx[dicesIn].clips;
+
+            SoundManager_Scr.instance.PlaySingleSound(clips[Random.Range(0, clips.Count)], volume, transform.position);
+            lastShake = Time.time;
+        }
+
+
+        Debug.Log("cur speed - " + speed + " difference - " + (prevSpeed - speed).ToString() + " volume - " + volume);
     }
 
     public Vector3 GetPosOnPlane()
