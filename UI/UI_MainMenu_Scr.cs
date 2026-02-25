@@ -43,8 +43,12 @@ public class UI_MainMenu_Scr : MonoBehaviour
     #region Click Events
     private void SinglePlayerClick(ClickEvent click)
     {
-        //TODO:
+        if (!SinglePlayerUI.isActiveAndEnabled)
+            SinglePlayerUI.gameObject.SetActive(true);
+        else
+            SinglePlayerUI.GetComponent<UIDocument>().rootVisualElement.style.display = DisplayStyle.Flex;
 
+        doc.rootVisualElement.style.display = DisplayStyle.None;
         ModeSelector_Scr.instance.SelectSP();
     }
     private void MultiplayerClick(ClickEvent click)
@@ -53,6 +57,7 @@ public class UI_MainMenu_Scr : MonoBehaviour
             MultiplayerUI.gameObject.SetActive(true);
         else
             MultiplayerUI.GetComponent<UIDocument>().rootVisualElement.style.display = DisplayStyle.Flex;
+
         doc.rootVisualElement.style.display = DisplayStyle.None;
         ModeSelector_Scr.instance.SelectMP();
     }

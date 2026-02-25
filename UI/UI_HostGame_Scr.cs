@@ -34,9 +34,9 @@ public class UI_HostGame_Scr : MonoBehaviour
     #region Click Events
     private void StartGameClick(ClickEvent click)
     {
-        Debug.Log("game started, loading scene");
+        Debug.Log("MP game started, loading scene");
         GameManager_Scr.instance.Subscribe();
-        NetworkManager.Singleton.SceneManager.LoadScene("SampleScene", LoadSceneMode.Single);
+        NetworkManager.Singleton.SceneManager.LoadScene("SampleScene", LoadSceneMode.Single); //TODO: мб вставить все возможные сцены в SO и брать оттуда, будет удобнее менять в разных режимах
     }
     private void BackClick(ClickEvent click)
     {
