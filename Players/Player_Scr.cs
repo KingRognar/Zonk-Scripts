@@ -86,7 +86,7 @@ public class Player_Scr : NetworkBehaviour
         {
             //SetSpecialValues();
         }
-        if (Input.GetKeyDown(KeyCode.G) && cup.state == Cup_Scr.CupState.empty)
+        if (Input.GetKeyDown(KeyCode.G) && cup.state == CupState.empty)
         {
             HandShowFck(true);
         }
@@ -330,7 +330,7 @@ public class Player_Scr : NetworkBehaviour
             { diceToRoll = diceSet;  firstRoll = false; }
         else
             diceToRoll = GetDiceSelected(false);
-        cup.state = Cup_Scr.CupState.filling;
+        cup.state = CupState.filling;
         cup.dicesIn = diceToRoll.Count - 1;
 
         /*int i = 0;
@@ -374,7 +374,7 @@ public class Player_Scr : NetworkBehaviour
         sequence.AppendCallback(() => { dice.transform.parent = cup.transform; });
         sequence.Append(dice.transform.DOMove(endpoint, 0.2f).SetEase(Ease.InCirc));
         if (addLastCallback)
-            sequence.AppendCallback(() => { cup.state = Cup_Scr.CupState.filled; });
+            sequence.AppendCallback(() => { cup.state = CupState.filled; });
 
     }
     public void DropDicesFromCup()
@@ -522,7 +522,7 @@ public class Player_Scr : NetworkBehaviour
                 dice.transform.parent = cup.transform;
                 dice.transform.DOLocalMove(new Vector3(0, 1.5f, 0), 0.1f);
             }
-            cup.state = Cup_Scr.CupState.filled;
+            cup.state = CupState.filled;
         });
 
         return sequence;
@@ -952,14 +952,6 @@ public class Player_Scr : NetworkBehaviour
         EndTurn();
         ResetValues();
         DropScore();
-    }
-    private struct UiRefs
-    {
-        public TMP_Text turnScore;
-        public TMP_Text totalScore;
-        public Button endTurn;
-        public Scores_Scr playersScores;
-        public GameObject yourTurnSign;
     }
     #endregion
 

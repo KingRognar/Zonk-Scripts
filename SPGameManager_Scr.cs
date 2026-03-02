@@ -9,10 +9,7 @@ public class SPGameManager_Scr : MonoBehaviour
 {
     public static SPGameManager_Scr instance;
 
-    [SerializeField] private GameObject playerPref;
-    [SerializeField] private GameObject cupPref;
-    [SerializeField] private GameObject dicePref;
-    [SerializeField] private GameObject handsPref;
+    [SerializeField] private GameObject singlePlayerPref;
     [Space(10)]
     [SerializeField] private List<Player_Scr> listOfPlayers = new();
     [SerializeField] private int playerTurn = 0;
@@ -26,7 +23,7 @@ public class SPGameManager_Scr : MonoBehaviour
 
     private void Awake()
     {
-        SpawnPlayers();
+        SceneManager.activeSceneChanged += ChangedActiveScene;
     }
     private void Start()
     {
@@ -34,9 +31,30 @@ public class SPGameManager_Scr : MonoBehaviour
     }
 
 
-    public void SpawnPlayers()
+
+    public void SpawnPlayer()
+    {
+        SinglePlayer_Scr sPlayer = Instantiate(singlePlayerPref, spawnPositions[0], Quaternion.identity).GetComponent<SinglePlayer_Scr>();
+        sPlayer.Initialize();
+    }
+    public void SpawnBots()
     {
 
     }
 
+    private void ChangedActiveScene(Scene current, Scene next)
+    {
+        //TODO: мб проверять сцены по имени?
+        /*string currentName = current.name;
+
+        if (currentName == null)
+        {
+            // Scene1 has been removed
+            currentName = "Replaced";
+        }
+
+        Debug.Log("Scenes: " + currentName + ", " + next.name);*/
+        SpawnPlayer();
+        SpawnBots();
+    }
 }

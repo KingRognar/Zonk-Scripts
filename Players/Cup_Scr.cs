@@ -3,6 +3,7 @@ using DG.Tweening;
 using NUnit.Framework;
 using Unity.Netcode;
 using UnityEngine;
+using static Extensions_Scr;
 
 public class Cup_Scr : NetworkBehaviour
 {
@@ -175,55 +176,5 @@ public class Cup_Scr : NetworkBehaviour
         float dist;
         bool isHit = plane.Raycast(ray, out dist);
         return ray.GetPoint(dist);
-    }
-
-    public enum CupState
-    {
-        empty,
-        filling,
-        filled,
-        overturned,
-    }
-    private class Boundaries
-    {
-        //TODO: возможно нужно сделать разные границы для правой и левой руки
-
-        private Vector3 bottomLeftPoint;
-        private Vector3 bottomVector;
-        private Vector3 leftVector;
-
-        private float bottomSqreMagn;
-        private float leftSqreMagn;
-
-        public bool initialized = false;
-
-        public void SetupBoundaries(Plane plane, Transform playerTrans, float minHor, float maxHor, float minVer, float maxVer)
-        {
-            Vector3 planeFirstPos = plane.ClosestPointOnPlane(Vector3.zero);
-            bottomLeftPoint = planeFirstPos + playerTrans.right * minHor;
-            bottomVector = playerTrans.right * (maxHor - minHor);
-            leftVector = playerTrans.up * (maxVer - minVer);
-
-            bottomSqreMagn = bottomVector.sqrMagnitude;
-            leftSqreMagn = leftVector.sqrMagnitude;
-
-            initialized = true;
-        }
-        public Vector3 ClampPointToBoundaries(Vector3 point)
-        {
-            if (!initialized) { Debug.Log("Boundaries not initialized"); return point; }
-
-            Vector3 pointVector = point - bottomLeftPoint;
-
-            float t1 = Vector3.Dot(pointVector, bottomVector) / bottomSqreMagn;
-            float t2 = Vector3.Dot(pointVector, leftVector) / leftSqreMagn;
-
-            t1 = Mathf.Clamp(t1, 0, 1);
-            t2 = Mathf.Clamp(t2, 0, 1);
-
-            Vector3 clampedVector = bottomLeftPoint + bottomVector * t1 + leftVector * t2;
-
-            return clampedVector;
-        }
     }
 }
