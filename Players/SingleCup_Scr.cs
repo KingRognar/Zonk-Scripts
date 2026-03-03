@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using DG.Tweening;
 using UnityEngine;
 using static Cup_Scr;
@@ -24,8 +25,37 @@ public class SingleCup_Scr : MonoBehaviour
     [SerializeField] private float shakeDelay = 0.1f;
     private float lastShake = -1f;
 
+    public struct AudioClips
+    {
+        [SerializeField] public List<AudioClip> clips;
+    }
+    [SerializeField] private List<AudioClips> shakingSfx;
+    [SerializeField] AudioClip cupOverturnSfx;
 
     public int dicesIn = -1;
+
+    private void OnMouseDown()
+    {
+        if (!player.isMyTurn) return;
+
+        if (state == CupState.empty && player.rerollAvailable)
+            FillCup();
+        if (state == CupState.overturned)
+            ResetCup();
+    }
+    private void OnMouseDrag()
+    {
+        if (state == CupState.filled)
+        {
+            MoveCup();
+            ShakingSound();
+        }
+    }
+    private void OnMouseUp()
+    {
+        if (state == CupState.filled)
+            OverturnCup();
+    }
 
 
     public void Initialization()
@@ -35,5 +65,106 @@ public class SingleCup_Scr : MonoBehaviour
         plane = new Plane(-player.transform.forward, transform.position);
         Debug.Log("dist:" + plane.distance);
         Debug.Log("norm:" + plane.normal);
+    }
+
+    private void FillCup()
+    {
+        player.MoveDicesToCup();
+    }
+    private void MoveCup()
+    {
+        if (sequence != null)
+            sequence.Kill();
+
+        if (!isRotated)
+            RotateCup();
+
+        newPos = GetPosOnPlane();
+        Vector3 oldPos = transform.position;
+
+        transform.position = Vector3.Lerp(transform.position, newPos, Time.deltaTime * 16f);
+
+        if (!boundaries.initialized)
+            boundaries.SetupBoundaries(plane, player.transform, -14, 14, 0, 17);
+        transform.position = boundaries.ClampPointToBoundaries(transform.position);
+
+        prevSpeed = speed;
+        speed = (transform.position - oldPos).magnitude;
+    }
+    private void OverturnCup()
+    {
+        player.HandOverturnCupSequence(player.startAnimWithRightHand);
+        player.HandResetSequence(!player.startAnimWithRightHand);
+
+        Vector3 dropPos = new Vector3(transform.position.x, 8.5f, transform.position.z);
+
+        Quaternion endRot;
+        if (player.startAnimWithRightHand)
+            endRot = Quaternion.AngleAxis(180, player.transform.forward);
+        else
+            endRot = Quaternion.AngleAxis(-180, player.transform.forward);
+
+        player.diceDropPos = dropPos;
+        player.diceDropPos.y = 3;
+
+        sequence = DOTween.Sequence();
+        sequence.Append(transform.DOMove(dropPos, 0.4f).SetEase(Ease.InCirc));
+        sequence.Insert(0, transform.DORotateQuaternion(endRot, 0.4f).SetEase(Ease.InCirc));
+        sequence.AppendCallback(() => {
+            state = CupState.overturned;
+            SoundManager_Scr.instance.PlaySingleSound(cupOverturnSfx, 1f, transform.position);
+        });
+    }
+    private void ResetCup()
+    {
+        player.DropDicesFromCup();
+
+        sequence = DOTween.Sequence();
+
+        Vector3 playerPos = player.transform.position;
+        Vector3 newPos = player.transform.position + player.transform.GetOppositeOffset(transform.position, 10f);
+
+        sequence.Append(transform.DOMove(newPos, 0.5f));
+        sequence.Insert(0, transform.DORotate(new Vector3(0, 0, 0), 0.5f));
+        sequence.AppendCallback(() => { state = CupState.empty; isRotated = false; });
+    }
+    private void RotateCup()
+    {
+        Quaternion endRot;
+        if (player.startAnimWithRightHand)
+            endRot = Quaternion.AngleAxis(90, player.transform.forward);
+        else
+            endRot = Quaternion.AngleAxis(-90, player.transform.forward);
+
+        transform.DORotateQuaternion(endRot, 0.2f);
+        player.HandChangeGrabSequence(player.startAnimWithRightHand);
+        player.HandChangeCoverSequence(!player.startAnimWithRightHand);
+        isRotated = true;
+    }
+
+    private void ShakingSound()
+    {
+        float difference = Mathf.Abs(prevSpeed - speed);
+        float volume = 1f * Mathf.InverseLerp(10, -5, difference);
+
+        if (difference > speedThreshold && Time.time > lastShake + shakeDelay)
+        {
+            if (dicesIn < 0) return;
+            List<AudioClip> clips = shakingSfx[dicesIn].clips;
+
+            SoundManager_Scr.instance.PlaySingleSound(clips[Random.Range(0, clips.Count)], volume, transform.position);
+            lastShake = Time.time;
+        }
+
+
+        Debug.Log("cur speed - " + speed + " difference - " + (prevSpeed - speed).ToString() + " volume - " + volume);
+    }
+
+    public Vector3 GetPosOnPlane()
+    {
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        float dist;
+        bool isHit = plane.Raycast(ray, out dist);
+        return ray.GetPoint(dist);
     }
 }
