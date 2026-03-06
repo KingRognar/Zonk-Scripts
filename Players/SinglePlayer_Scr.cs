@@ -19,6 +19,7 @@ public class SinglePlayer_Scr : MonoBehaviour
     private UiRefs uiRefs = new();
     [SerializeField] public List<SingleDice_Scr> diceSet = new();
     [SerializeField] private Hands_Scr hands;
+    [HideInInspector] public SPGameManager_Scr spGM;
 
     //Dice selection
     private List<SingleDice_Scr> diceSelected = new(), diceToRoll = new();
@@ -88,13 +89,12 @@ public class SinglePlayer_Scr : MonoBehaviour
         uiRefs.endTurn = gameUiTrans.GetChild(0).GetComponent<Button>();
         uiRefs.playersScores = GameObject.FindAnyObjectByType<Scores_Scr>();
         uiRefs.yourTurnSign = gameUiTrans.GetChild(4).gameObject;
-        //TODO:
-        /*if (OwnerClientId != 0)
-            uiRefs.playersScores.EnableAnotherScoreRpc(OwnerClientId);
-        else
-            uiRefs.yourTurnSign.SetActive(true);
+        uiRefs.yourTurnSign.SetActive(true);
 
-        uiRefs.endTurn.onClick.AddListener(EndTurnBtn);*/
+        UpdateTurnScore();
+        UpdateScore();
+
+        uiRefs.endTurn.onClick.AddListener(EndTurnBtn);
     }
     private void EnableOthersScores()
     {
@@ -804,21 +804,16 @@ public class SinglePlayer_Scr : MonoBehaviour
     #endregion
 
     #region TBS
+    public void StartTurn()
+    {
+        isMyTurn = true;
+        uiRefs.yourTurnSign.gameObject.SetActive(true);
+    }
     private void EndTurn()
     {
         isMyTurn = false;
         uiRefs.yourTurnSign.gameObject.SetActive(false);
-
-        //TODO: GM End Turn
-        //GameManager_Scr.instance.PlayerTurnEndRpc(NetworkObject.OwnerClientId, score);
-    }
-    [Rpc(SendTo.SpecifiedInParams)]
-    public void PlayerTurnStartRpc(RpcParams rpcParams)
-    {
-        isMyTurn = true;
-        uiRefs.yourTurnSign.gameObject.SetActive(true);
-
-        //TODO: добавить надпись что мой ход
+        spGM.TurnPass();
     }
     #endregion
 }

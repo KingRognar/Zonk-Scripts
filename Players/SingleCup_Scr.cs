@@ -25,6 +25,7 @@ public class SingleCup_Scr : MonoBehaviour
     [SerializeField] private float shakeDelay = 0.1f;
     private float lastShake = -1f;
 
+    [System.Serializable]
     public struct AudioClips
     {
         [SerializeField] public List<AudioClip> clips;

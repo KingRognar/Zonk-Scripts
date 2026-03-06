@@ -11,7 +11,9 @@ public class SPGameManager_Scr : MonoBehaviour
 
     [SerializeField] private GameObject singlePlayerPref;
     [Space(10)]
-    [SerializeField] private List<Player_Scr> listOfPlayers = new();
+    [SerializeField] private SinglePlayer_Scr mainPlayer;
+    //[SerializeField] private List<Player_Scr> listOfPlayers = new(); переделать на ботов
+    private int numberOfPlayers = 1;
     [SerializeField] private int playerTurn = 0;
     [SerializeField] private int[] playerScores = new int[4];
     private int maxScore = 4000; //TODO: sync it
@@ -32,14 +34,30 @@ public class SPGameManager_Scr : MonoBehaviour
 
 
 
-    public void SpawnPlayer()
+    private void SpawnPlayer()
     {
-        SinglePlayer_Scr sPlayer = Instantiate(singlePlayerPref, spawnPositions[0], Quaternion.identity).GetComponent<SinglePlayer_Scr>();
-        sPlayer.Initialize();
+        mainPlayer = Instantiate(singlePlayerPref, spawnPositions[0], Quaternion.identity).GetComponent<SinglePlayer_Scr>();
+        mainPlayer.Initialize();
+        mainPlayer.spGM = this;
+        mainPlayer.isMyTurn = true;
     }
-    public void SpawnBots()
+    private void SpawnBots()
     {
 
+    }
+
+    public void TurnPass()
+    {
+        if (++playerTurn >= numberOfPlayers)
+            playerTurn = 0;
+
+        if (playerTurn == 0)
+        {
+            mainPlayer.StartTurn();
+            return;
+        }
+
+        //TODO: передача хода боту
     }
 
     private void ChangedActiveScene(Scene current, Scene next)
