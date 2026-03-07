@@ -721,6 +721,19 @@ public class SinglePlayer_Scr : MonoBehaviour
     {
         CalculateSelectedDices();
     }
+    private void ResetValues()
+    {
+        comboCount = 0;
+
+        diceSelected = new();
+        diceToRoll = new();
+        diceCombos = new();
+
+        firstRoll = true;
+        rerollAvailable = true; // TODO: поменять когда добавлю StartTurn()?
+
+        ResetAllDices();
+    }
     #endregion
 
     #region UI Thingies
@@ -782,25 +795,6 @@ public class SinglePlayer_Scr : MonoBehaviour
         ResetValues();
         AddTurnScore();
     }
-    private void ResetValues()
-    {
-        comboCount = 0;
-
-        diceSelected = new();
-        diceToRoll = new();
-        diceCombos = new();
-
-        firstRoll = true;
-        rerollAvailable = true; // TODO: поменять когда добавлю StartTurn()?
-
-        ResetAllDices();
-    }
-    private void BreakStreakAndEndTurn()
-    {
-        EndTurn();
-        ResetValues();
-        DropScore();
-    }
     #endregion
 
     #region TBS
@@ -808,6 +802,12 @@ public class SinglePlayer_Scr : MonoBehaviour
     {
         isMyTurn = true;
         uiRefs.yourTurnSign.gameObject.SetActive(true);
+    }
+    private void BreakStreakAndEndTurn()
+    {
+        EndTurn();
+        ResetValues();
+        DropScore();
     }
     private void EndTurn()
     {
