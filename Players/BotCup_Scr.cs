@@ -35,9 +35,14 @@ public class BotCup_Scr : MonoBehaviour
     public int dicesIn = -1;
 
 
+    private Vector3 dropPos;
+    private Quaternion endRot;
+
     public void Initialization()
     {
         plane = new Plane(-player.transform.forward, transform.position);
+        dropPos = transform.position;
+        endRot = transform.rotation;
     }
 
     public Sequence MoveCup()
@@ -45,14 +50,42 @@ public class BotCup_Scr : MonoBehaviour
         //TODO: переделать на умное!
 
         Sequence movementSeq = DOTween.Sequence(this);
-        int shakesNum = Random.Range(3, 5);
+        int shakesNum = Random.Range(4, 7);
         for (int i = 0; i < shakesNum; i++)
         {
-            movementSeq.Append(transform.DOMove(GetPosOnPlane(), 0.4f).SetEase(Ease.InOutCubic));
+            movementSeq.Append(transform.DOMove(GetPosOnPlane(), 0.25f).SetEase(Ease.InOutCubic));
         }
 
         return movementSeq;
     }
+   public Sequence OverturnCup()
+    {
+        sequence = DOTween.Sequence();
+
+        dropPos = new Vector3(transform.position.x, 8.5f, transform.position.z);
+        if (player.startAnimWithRightHand)
+            endRot = Quaternion.AngleAxis(180, player.transform.forward);
+        else
+            endRot = Quaternion.AngleAxis(-180, player.transform.forward);
+
+        sequence.AppendCallback(() =>
+        {
+            player.HandOverturnCupSequence(player.startAnimWithRightHand);
+            player.HandResetSequence(!player.startAnimWithRightHand);
+
+            player.diceDropPos = dropPos;
+            player.diceDropPos.y = 3;
+        });
+        sequence.Append(transform.DOMove(dropPos, 0.4f).SetEase(Ease.InCirc));
+        sequence.Insert(0, transform.DORotateQuaternion(endRot, 0.4f).SetEase(Ease.InCirc));
+        sequence.AppendCallback(() => {
+            state = CupState.overturned;
+            SoundManager_Scr.instance.PlaySingleSound(cupOverturnSfx, 1f, transform.position);
+        });
+
+        return sequence;
+    }
+
     public void RotateCup()
     {
         Debug.Log("начианаю rotate cup");

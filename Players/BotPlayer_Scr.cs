@@ -103,7 +103,13 @@ public class BotPlayer_Scr : MonoBehaviour
         sequence.Append(MoveDicesToCup());
         sequence.AppendCallback(() => { Debug.Log("завершил первый сиквенс"); cup.RotateCup(); });
         sequence.Append(cup.MoveCup());
+        sequence.AppendCallback(() => { OverturnCup(); });
+    }
+    private void OverturnCup()
+    {
+        Sequence sequence = DOTween.Sequence(this);
 
+        sequence.Append(cup.OverturnCup());
 
         sequence.AppendCallback(() => { EndTurn(); Debug.Log("завершил второй сиквенс"); });
     }
