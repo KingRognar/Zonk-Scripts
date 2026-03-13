@@ -51,14 +51,51 @@ public class BotCup_Scr : MonoBehaviour
 
         Sequence movementSeq = DOTween.Sequence(this);
         int shakesNum = Random.Range(4, 7);
+        Vector3[] line = GetMovementLine();
+
+        Debug.Log(line);
         for (int i = 0; i < shakesNum; i++)
         {
-            movementSeq.Append(transform.DOMove(GetPosOnPlane(), 0.25f).SetEase(Ease.InOutCubic));
+            Vector3 nextPoint = line[i % 2] + GetRandomDiviation(3f);
+            Debug.Log(nextPoint);
+            movementSeq.Append(transform.DOMove(nextPoint, 0.25f).SetEase(Ease.InOutCirc));
+            //movementSeq.Append(transform.DOMove(GetPosOnPlane(), 0.25f).SetEase(Ease.InOutCubic));
         }
 
         return movementSeq;
     }
-   public Sequence OverturnCup()
+    private Vector3[] GetMovementLine()
+    {
+        Vector3[] line = new Vector3[2];
+
+        line[0] = GetPosOnPlane(-14, 14, 9, 17);
+        int tries = 5;
+        do
+        {
+            line[1] = GetPosOnPlane(-14, 14, 9, 17);
+            if ((line[0] - line[1]).magnitude > 5)
+                break;
+        }
+        while (tries-- > 0);
+
+
+        if (tries != 0)
+            return line;
+        else
+        {
+            line[0] = new Vector3(-10, 10, 0);
+            line[1] = new Vector3(10, 15, 0);
+            return line;
+        }
+    }
+    private Vector3 GetRandomDiviation(float inSqr)
+    {
+        Vector3 divi = new Vector3(Random.Range(-inSqr, inSqr), Random.Range(-inSqr, inSqr), 0);
+        return divi;
+    }
+
+
+    public Sequence OverturnCup()
     {
         sequence = DOTween.Sequence();
 
@@ -85,6 +122,20 @@ public class BotCup_Scr : MonoBehaviour
 
         return sequence;
     }
+    public Sequence ResetCup()
+    {
+        sequence = DOTween.Sequence();
+
+        Vector3 playerPos = player.transform.position;
+        Vector3 newPos = player.transform.position + player.transform.GetOppositeOffset(transform.position, 10f);
+
+        sequence.AppendCallback(() => { player.DropDicesFromCup();});
+            sequence.Append(transform.DOMove(newPos, 0.5f));
+        sequence.Insert(0, transform.DORotate(new Vector3(0, 0, 0), 0.5f));
+        sequence.AppendCallback(() => { state = CupState.empty; isRotated = false; });
+
+        return sequence;
+    }
 
     public void RotateCup()
     {
@@ -102,9 +153,9 @@ public class BotCup_Scr : MonoBehaviour
         isRotated = true;
     }
 
-    public Vector3 GetPosOnPlane()
+    public Vector3 GetPosOnPlane(float xMin, float xMax, float yMin, float yMax)
     {
-        Vector3 randomPoint = new Vector3(Random.Range(-30, 30), Random.Range(0, 30), 0);
+        Vector3 randomPoint = new Vector3(Random.Range(xMin, xMax), Random.Range(yMin, yMax), 0);
         return plane.ClosestPointOnPlane(randomPoint);
     }
 }

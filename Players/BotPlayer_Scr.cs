@@ -110,6 +110,8 @@ public class BotPlayer_Scr : MonoBehaviour
         Sequence sequence = DOTween.Sequence(this);
 
         sequence.Append(cup.OverturnCup());
+        sequence.AppendInterval(0.5f);
+        sequence.Append(cup.ResetCup());
 
         sequence.AppendCallback(() => { EndTurn(); Debug.Log("завершил второй сиквенс"); });
     }
