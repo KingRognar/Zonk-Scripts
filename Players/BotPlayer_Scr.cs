@@ -113,6 +113,8 @@ public class BotPlayer_Scr : MonoBehaviour
         sequence.AppendInterval(0.5f);
         sequence.Append(cup.ResetCup());
 
+        sequence.AppendCallback(() => { ChooseWisely(); });
+
         sequence.AppendCallback(() => { EndTurn(); Debug.Log("завершил второй сиквенс"); });
     }
 
@@ -465,7 +467,7 @@ public class BotPlayer_Scr : MonoBehaviour
         int[] values = new int[6] { 0, 0, 0, 0, 0, 0 };
         for (int i = 0; i < dices.Count; i++)
         {
-            values[dices[i].UpdateDiceValue() - 1]++;
+            values[dices[i].UpdateAndGetDiceValue() - 1]++;
         }
         return values;
     }
@@ -584,6 +586,124 @@ public class BotPlayer_Scr : MonoBehaviour
         if (rerollAvailable)
             return true;
         return false;
+    }
+
+
+    private void ChooseWisely()
+    {
+        List<BotDice_Scr>[] dicesByValue = SortActiveDices();
+        //TODO:
+        //GetAllCombos
+        //SortCombos
+        //SelectCombos
+        //DesideToRethrow
+    }
+    private List<BotDice_Scr>[] SortActiveDices()
+    {
+        List<BotDice_Scr> activeDices = GetDiceActive();
+        List<BotDice_Scr>[] dicesByValue = new List<BotDice_Scr>[6];
+        for (int i = 0; i < dicesByValue.Length; i++)
+            dicesByValue[i] = new List<BotDice_Scr>();
+
+        foreach (BotDice_Scr dice in activeDices)
+            dicesByValue[dice.UpdateAndGetDiceValue() - 1].Add(dice);
+
+        return dicesByValue;
+    }
+    private void GetAllCombos(List<BotDice_Scr>[] dicesByValue)
+    {
+        List<Combo> comboList = new List<Combo>();
+
+        //Flashes
+        if (dicesByValue[1].Count > 0 && dicesByValue[2].Count > 0 &&
+            dicesByValue[3].Count > 0 && dicesByValue[4].Count > 0)
+        {
+            bool has1 = false, has6 = false;
+            if (dicesByValue[0].Count > 0)
+            {
+                has1 = true;
+                Combo flash15 = new Combo(500);
+                for (int i = 0; i < 5; i++)
+                    flash15.dicesInCombo.Add(dicesByValue[i][0]);
+                comboList.Add(flash15);
+            }
+            if (dicesByValue[5].Count > 0)
+            {
+                has6 = true;
+                Combo flash26 = new Combo(750);
+                for (int i = 1; i < 6; i++)
+                    flash26.dicesInCombo.Add(dicesByValue[i][0]);
+                comboList.Add(flash26);
+            }
+            if (has1 && has6)
+            {
+                Combo flash16 = new Combo(1500);
+                for (int i = 0; i < 6; i++)
+                    flash16.dicesInCombo.Add(dicesByValue[i][0]);
+                comboList.Add(flash16);
+            }
+        }
+        else
+            Debug.Log("у бота нет флэшей");
+
+        //SingleAndDouble
+        if (dicesByValue[0].Count > 0)
+        {
+            Combo one = new Combo(100, dicesByValue[0][0]);
+            comboList.Add(one);
+            if (dicesByValue[0].Count > 1)
+            {
+                one.value = 200;
+                one.dicesInCombo.Add(dicesByValue[0][1]);
+                comboList.Add(one);
+            }
+        }
+        if (dicesByValue[4].Count > 0)
+        {
+            Combo five = new Combo(50, dicesByValue[4][0]);
+            comboList.Add(five);
+            if (dicesByValue[4].Count > 1)
+            {
+                five.value = 100;
+                five.dicesInCombo.Add(dicesByValue[4][1]);
+                comboList.Add(five);
+            }
+        }
+
+        //TripletsAndMore
+        //TODO:
+        for (int i = 0; i < dicesByValue.Length; i++)
+        {
+
+        }
+    }
+
+    private class Combo
+    {
+        public int value;
+        public List<BotDice_Scr> dicesInCombo;
+
+        public Combo()
+        {
+            value = 0;
+            dicesInCombo = new List<BotDice_Scr>();
+        }
+        public Combo(int _value)
+        {
+            value = _value;
+            dicesInCombo = new List<BotDice_Scr>();
+        }
+        public Combo(int _value, BotDice_Scr diceScr)
+        {
+            value = _value;
+            dicesInCombo = new List<BotDice_Scr>();
+            dicesInCombo.Add(diceScr);
+        }
+        public Combo(int _value, List<BotDice_Scr> _dicesInCombo)
+        {
+            value = _value;
+            dicesInCombo = _dicesInCombo;
+        }
     }
     #endregion
 

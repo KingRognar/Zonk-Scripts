@@ -58,7 +58,7 @@ public class BotCup_Scr : MonoBehaviour
         {
             Vector3 nextPoint = line[i % 2] + GetRandomDiviation(3f);
             Debug.Log(nextPoint);
-            movementSeq.Append(transform.DOMove(nextPoint, 0.25f).SetEase(Ease.InOutCirc));
+            movementSeq.Append(transform.DOMove(nextPoint, 0.2f).SetEase(Ease.InOutCirc));
             //movementSeq.Append(transform.DOMove(GetPosOnPlane(), 0.25f).SetEase(Ease.InOutCubic));
         }
 
@@ -73,7 +73,7 @@ public class BotCup_Scr : MonoBehaviour
         do
         {
             line[1] = GetPosOnPlane(-14, 14, 9, 17);
-            if ((line[0] - line[1]).magnitude > 5)
+            if ((line[0] - line[1]).magnitude > 10)
                 break;
         }
         while (tries-- > 0);

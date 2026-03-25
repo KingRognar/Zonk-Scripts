@@ -38,7 +38,7 @@ public class BotDice_Scr : MonoBehaviour
         outline.enabled = false;
     }
 
-    public int UpdateDiceValue()
+    public int UpdateAndGetDiceValue()
     {
         if (transform.up == Vector3.up)
         { value = 5; return 5; }
