@@ -214,10 +214,10 @@ public class SinglePlayer_Scr : MonoBehaviour
     {
         Vector3 cupLoaclPos = cup.transform.localPosition;
         startAnimWithRightHand = cupLoaclPos.x > 0;
-        if (startAnimWithRightHand)
+        /*if (startAnimWithRightHand)
             Debug.Log("правая рука " + cupLoaclPos);
         else
-            Debug.Log("левая рука " + cupLoaclPos);
+            Debug.Log("левая рука " + cupLoaclPos);*/
     }
     private void DiceCupSequence(SingleDice_Scr dice, int i, bool addLastCallback)
     {

@@ -21,6 +21,7 @@ public class BotPlayer_Scr : MonoBehaviour
     public int[] diceValues = new int[6] { 0, 0, 0, 0, 0, 0 };
     public List<int[]> diceCombos = new List<int[]>();
 
+    List<Combo> comboList;
     private int comboCount = 0;
     [HideInInspector] public bool firstRoll = true;
 
@@ -114,8 +115,6 @@ public class BotPlayer_Scr : MonoBehaviour
         sequence.Append(cup.ResetCup());
 
         sequence.AppendCallback(() => { ChooseWisely(); });
-
-        sequence.AppendCallback(() => { EndTurn(); Debug.Log("завершил второй сиквенс"); });
     }
 
     #endregion
@@ -592,11 +591,27 @@ public class BotPlayer_Scr : MonoBehaviour
     private void ChooseWisely()
     {
         List<BotDice_Scr>[] dicesByValue = SortActiveDices();
+        GetAllCombos(dicesByValue);
+
+        if (comboList.Count == 0)
+            BreakStreakAndEndTurn();
+
+        //Debug_WriteAllCombos();
+        SortCombosByValue();
+        Debug_WriteAllCombos();
+        List<BotDice_Scr> selected = SelectCombos();
+        DeactivateDices(selected);
+        if (GetDiceActive().Count > 3)
+            MakeTurn();
+        else
+            EndTurn();
+
         //TODO:
         //GetAllCombos
         //SortCombos
         //SelectCombos
         //DesideToRethrow
+        //Chance for mistake
     }
     private List<BotDice_Scr>[] SortActiveDices()
     {
@@ -612,7 +627,7 @@ public class BotPlayer_Scr : MonoBehaviour
     }
     private void GetAllCombos(List<BotDice_Scr>[] dicesByValue)
     {
-        List<Combo> comboList = new List<Combo>();
+        comboList = new List<Combo>();
 
         //Flashes
         if (dicesByValue[1].Count > 0 && dicesByValue[2].Count > 0 &&
@@ -653,9 +668,10 @@ public class BotPlayer_Scr : MonoBehaviour
             comboList.Add(one);
             if (dicesByValue[0].Count > 1)
             {
-                one.value = 200;
-                one.dicesInCombo.Add(dicesByValue[0][1]);
-                comboList.Add(one);
+                Combo one2 = new Combo(one);
+                one2.value = 200;
+                one2.dicesInCombo.Add(dicesByValue[0][1]);
+                comboList.Add(one2);
             }
         }
         if (dicesByValue[4].Count > 0)
@@ -664,18 +680,93 @@ public class BotPlayer_Scr : MonoBehaviour
             comboList.Add(five);
             if (dicesByValue[4].Count > 1)
             {
-                five.value = 100;
-                five.dicesInCombo.Add(dicesByValue[4][1]);
-                comboList.Add(five);
+                Combo five2 = new Combo(five);
+                five2.value = 100;
+                five2.dicesInCombo.Add(dicesByValue[4][1]);
+                comboList.Add(five2);
             }
         }
 
         //TripletsAndMore
-        //TODO:
+        Dictionary<int, int> baseValues = new Dictionary<int, int>()
+        {
+            { 0, 1000}, { 1, 200}, { 2, 300}, { 3, 400}, { 4, 500}, { 5, 600}
+        };
         for (int i = 0; i < dicesByValue.Length; i++)
         {
+            if (dicesByValue[i].Count < 3)
+                continue;
 
+
+            int score = baseValues[i] * (int)Mathf.Pow(2, dicesByValue[i].Count - 3); //TODO: я хз но тут может быть проблема с приведением типа (мб, а мб и нет)
+            Combo combo = new Combo(score);
+            foreach (BotDice_Scr dice in dicesByValue[i])
+                combo.dicesInCombo.Add(dice);
+            comboList.Add(combo);
         }
+    }
+    private void Debug_WriteAllCombos()
+    {
+        Debug.Log("bot combos:");
+        int i = 1;
+        foreach (Combo combo in comboList)
+        {
+            string str = i++.ToString() + ") " + combo.value.ToString() + " | ";
+            foreach (BotDice_Scr dice in combo.dicesInCombo)
+                str += dice.name + ", ";
+            Debug.Log(str);
+        }
+    }
+    private void SortCombosByValue()
+    {
+        comboList.Sort((x, y) => x.value.CompareTo(y.value));
+    }
+    private List<BotDice_Scr> SelectCombos()
+    {
+        List<BotDice_Scr> selectedDices = new List<BotDice_Scr>();
+
+        if (comboList[comboList.Count - 1].value < 100)
+        {
+            Combo oneDieCombo = FindOneDieHighestValueCombo();
+            selectedDices.Add(oneDieCombo.dicesInCombo[0]);
+            tempScore += oneDieCombo.value;
+            return selectedDices;
+        }
+        
+        for (int i = comboList.Count - 1; i >= 0; i--)
+        {
+            bool foundDupes = false;
+            foreach (BotDice_Scr die in comboList[i].dicesInCombo)
+                if (selectedDices.Contains(die))
+                {
+                    foundDupes = true;
+                    break;
+                }
+            if (foundDupes) continue;
+
+            selectedDices.AddRange(comboList[i].dicesInCombo);
+            tempScore += comboList[i].value;
+        }
+
+        return selectedDices;
+    }
+    private Combo FindOneDieHighestValueCombo()
+    {
+        Combo selected = new Combo(0);
+        foreach (Combo combo in comboList)
+            if (combo.value > selected.value && combo.dicesInCombo.Count == 1)
+                selected = combo;
+
+        return selected;
+    }
+    private void DeactivateDices(List<BotDice_Scr> dices)
+    {
+        foreach (BotDice_Scr die in dices)
+        {
+            die.isActive = false;
+            die.ChangeSelected();
+        }
+
     }
 
     private class Combo
@@ -703,6 +794,11 @@ public class BotPlayer_Scr : MonoBehaviour
         {
             value = _value;
             dicesInCombo = _dicesInCombo;
+        }
+        public Combo(Combo combo)
+        {
+            value = combo.value;
+            dicesInCombo = new List<BotDice_Scr>(combo.dicesInCombo);
         }
     }
     #endregion
@@ -795,8 +891,6 @@ public class BotPlayer_Scr : MonoBehaviour
 
         firstRoll = true;
         rerollAvailable = true; // TODO: поменять когда добавлю StartTurn()?
-
-        ResetAllDices();
     }
     #endregion
 
@@ -804,6 +898,7 @@ public class BotPlayer_Scr : MonoBehaviour
     public void StartTurn()
     {
         isMyTurn = true;
+        ResetAllDices();
         MakeTurn();
         //uiRefs.yourTurnSign.gameObject.SetActive(true);
         //TODO: мб сделать надпись чей ход?
@@ -811,7 +906,7 @@ public class BotPlayer_Scr : MonoBehaviour
     private void BreakStreakAndEndTurn()
     {
         EndTurn();
-        //ResetValues();
+        ResetValues();
         //DropScore();
     }
     private void EndTurn()
@@ -819,6 +914,7 @@ public class BotPlayer_Scr : MonoBehaviour
         isMyTurn = false;
         //uiRefs.yourTurnSign.gameObject.SetActive(false);
         spGM.TurnPass();
+        //ResetAllDices();
     }
     #endregion
 }

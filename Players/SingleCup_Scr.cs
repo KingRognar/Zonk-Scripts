@@ -158,7 +158,7 @@ public class SingleCup_Scr : MonoBehaviour
         }
 
 
-        Debug.Log("cur speed - " + speed + " difference - " + (prevSpeed - speed).ToString() + " volume - " + volume);
+        //Debug.Log("cur speed - " + speed + " difference - " + (prevSpeed - speed).ToString() + " volume - " + volume);
     }
 
     public Vector3 GetPosOnPlane()

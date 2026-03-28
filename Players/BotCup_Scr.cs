@@ -57,7 +57,7 @@ public class BotCup_Scr : MonoBehaviour
         for (int i = 0; i < shakesNum; i++)
         {
             Vector3 nextPoint = line[i % 2] + GetRandomDiviation(3f);
-            Debug.Log(nextPoint);
+            //Debug.Log(nextPoint);
             movementSeq.Append(transform.DOMove(nextPoint, 0.2f).SetEase(Ease.InOutCirc));
             //movementSeq.Append(transform.DOMove(GetPosOnPlane(), 0.25f).SetEase(Ease.InOutCubic));
         }
