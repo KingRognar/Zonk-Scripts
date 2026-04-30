@@ -8,6 +8,7 @@ using Unity.Netcode.Components;
 using UnityEngine;
 using UnityEngine.Animations.Rigging;
 using UnityEngine.UI;
+using UnityEngine.UIElements;
 using static Extensions_Scr;
 
 public class SinglePlayer_Scr : MonoBehaviour
@@ -16,10 +17,11 @@ public class SinglePlayer_Scr : MonoBehaviour
     //References to other objects
     [SerializeField] public SingleCup_Scr cup;
     [SerializeField] private Transform canvasTrans;
-    private UiRefs uiRefs = new();
+    //private UiRefs uiRefs = new();
     [SerializeField] public List<SingleDice_Scr> diceSet = new();
     [SerializeField] private Hands_Scr hands;
     [HideInInspector] public SPGameManager_Scr spGM;
+    [SerializeField] private UI_Manager_Scr uiManager;
 
     //Dice selection
     private List<SingleDice_Scr> diceSelected = new(), diceToRoll = new();
@@ -57,7 +59,7 @@ public class SinglePlayer_Scr : MonoBehaviour
 
     void Start()
     {
-        //Initialize();
+        SubscribeToEvents();
     }
 
     #region Init
@@ -76,7 +78,7 @@ public class SinglePlayer_Scr : MonoBehaviour
     }
     protected void SetupUI()
     {
-        Canvas canvas = FindAnyObjectByType<Canvas>();
+        /*Canvas canvas = FindAnyObjectByType<Canvas>();
         if (canvas)
             canvasTrans = canvas.transform;
         else
@@ -89,12 +91,17 @@ public class SinglePlayer_Scr : MonoBehaviour
         uiRefs.endTurn = gameUiTrans.GetChild(0).GetComponent<Button>();
         uiRefs.playersScores = GameObject.FindAnyObjectByType<Scores_Scr>();
         uiRefs.yourTurnSign = gameUiTrans.GetChild(4).gameObject;
-        uiRefs.yourTurnSign.SetActive(true);
+        uiRefs.yourTurnSign.SetActive(true);*/
 
-        UpdateTurnScore();
-        UpdateScore();
+        uiManager = UI_Manager_Scr.instance;
 
-        uiRefs.endTurn.onClick.AddListener(EndTurnBtn);
+
+        //UpdateTurnScore();
+        //UpdateScore();
+
+        //uiRefs.endTurn.onClick.AddListener(EndTurnBtn);
+
+
     }
     private void EnableOthersScores()
     {
@@ -158,6 +165,10 @@ public class SinglePlayer_Scr : MonoBehaviour
             diceSet[i].transform.position = dicePos + new Vector3(0, 1, 0);
             RollDice(diceSet[i].transform);
         }
+    }
+    private void SubscribeToEvents()
+    {
+        uiManager.endTurnBtn.RegisterCallback<ClickEvent>(EndTurnBtn);
     }
 
     protected void LoadDiceColoringSchemes()
@@ -740,16 +751,19 @@ public class SinglePlayer_Scr : MonoBehaviour
     private void UpdateTurnScore()
     {
         if (turnScore + tempScore == 0)
-        { uiRefs.turnScore.text = ""; return; }
+        { /*uiRefs.turnScore.text = ""*/; return; }
 
-        int textSize = 50 + Mathf.Max(0, (turnScore + tempScore - 500) / 200);
-        uiRefs.turnScore.text = "+ " + (turnScore + tempScore).ToString();
-        uiRefs.turnScore.fontSize = textSize;
+        uiManager.UpdateTempScore(turnScore + tempScore);
+
+        //int textSize = 50 + Mathf.Max(0, (turnScore + tempScore - 500) / 200);
+        //uiRefs.turnScore.text = "+ " + (turnScore + tempScore).ToString();
+        //uiRefs.turnScore.fontSize = textSize;
     }
     private void UpdateScore()
     {
         Debug.Log("обновил скор " + score);
-        uiRefs.totalScore.text = score.ToString() + " / " + maxScore.ToString();
+
+        //uiRefs.totalScore.text = score.ToString() + " / " + maxScore.ToString();
     }
     private void AddTurnScore() //TODO: возможно надо изменить порядок вызова функций в callback
     {
@@ -757,7 +771,10 @@ public class SinglePlayer_Scr : MonoBehaviour
         turnScore = 0;
         tempScore = 0;
         Sequence sequence = DOTween.Sequence();
-        Vector3 textStartPos = uiRefs.turnScore.rectTransform.position;
+
+        uiManager.UpdateScore(score, maxScore);
+
+        /*Vector3 textStartPos = uiRefs.turnScore.rectTransform.position;
 
         sequence.Append(uiRefs.turnScore.rectTransform.DOMove(textStartPos + new Vector3(0, -30, 0), 0.3f).SetEase(Ease.OutCirc));
         sequence.Append(uiRefs.turnScore.rectTransform.DOMove(uiRefs.totalScore.rectTransform.position, 0.3f).SetEase(Ease.InCirc));
@@ -767,7 +784,7 @@ public class SinglePlayer_Scr : MonoBehaviour
             uiRefs.turnScore.rectTransform.position = textStartPos;
             UpdateScore();
             UpdateTurnScore();
-        });
+        });*/
     }
     private void DropScore()
     {
@@ -775,7 +792,7 @@ public class SinglePlayer_Scr : MonoBehaviour
         tempScore = 0;
 
         Sequence sequence = DOTween.Sequence();
-        Vector3 textStartPos = uiRefs.turnScore.rectTransform.position;
+        /*Vector3 textStartPos = uiRefs.turnScore.rectTransform.position;
 
         sequence.Append(uiRefs.turnScore.DOColor(Color.red, 0.3f));
         sequence.Append(DOTween.To(() => uiRefs.turnScore.color, x => uiRefs.turnScore.color = x, new Color(1, 1, 1, 0), 0.3f));
@@ -784,9 +801,9 @@ public class SinglePlayer_Scr : MonoBehaviour
             uiRefs.turnScore.color = Color.white;
             uiRefs.turnScore.rectTransform.position = textStartPos;
             UpdateTurnScore();
-        });
+        });*/
     }
-    private void EndTurnBtn() //TODO разделить на несколько методов
+    private void EndTurnBtn(ClickEvent click) //TODO разделить на несколько методов
     {
         if (!rerollAvailable)
             return;
@@ -801,7 +818,9 @@ public class SinglePlayer_Scr : MonoBehaviour
     public void StartTurn()
     {
         isMyTurn = true;
-        uiRefs.yourTurnSign.gameObject.SetActive(true);
+        uiManager.ShowYourTurn();
+        uiManager.SetActiveTurnBtn(true);
+        //uiRefs.yourTurnSign.gameObject.SetActive(true);
     }
     private void BreakStreakAndEndTurn()
     {
@@ -812,7 +831,8 @@ public class SinglePlayer_Scr : MonoBehaviour
     private void EndTurn()
     {
         isMyTurn = false;
-        uiRefs.yourTurnSign.gameObject.SetActive(false);
+        uiManager.SetActiveTurnBtn(false);
+        //uiRefs.yourTurnSign.gameObject.SetActive(false);
         spGM.TurnPass();
     }
     #endregion

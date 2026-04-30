@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using DG.Tweening;
 using Unity.Netcode;
+using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.Animations.Rigging;
 using static Extensions_Scr;
@@ -604,7 +605,18 @@ public class BotPlayer_Scr : MonoBehaviour
         if (GetDiceActive().Count > 3)
             MakeTurn();
         else
-            EndTurn();
+        {
+            if (GetDiceActive().Count == 0)
+            {
+                ResetAllDices();
+                MakeTurn();
+            }
+            else
+                EndTurn();
+        }
+
+
+
 
         //TODO:
         //GetAllCombos
