@@ -27,6 +27,14 @@ public class UI_Manager_Scr : MonoBehaviour
     [SerializeField] private float secondPhaseTime = 0.6f;
     [SerializeField] private float translateDist = 200f;
 
+    [Space(10)]
+    [SerializeField] private float tempScoreMoveUpTime = 0.4f;
+    [SerializeField] private float tempScoreTranslateDist = -90;
+    [SerializeField] private float tempScoreFadeDelay = 0.2f;
+    [SerializeField] private float tempScoreRandRotationSpread = 60f;
+
+    private Sequence seq_tempScoreShake;
+
     private void Awake()
     {
         if (instance == null) instance = this; else Destroy(this);
@@ -127,6 +135,7 @@ public class UI_Manager_Scr : MonoBehaviour
     {
         score.text = newScore.ToString();
         maxScore.text = newMaxScore.ToString();
+        MoveTempScoreToTotal();
     }
     public void UpdateTempScore(int newTempScore)
     {
@@ -138,6 +147,78 @@ public class UI_Manager_Scr : MonoBehaviour
         tempScore.text = "+ " + newTempScore.ToString();
         tempScore.style.fontSize = 60 + Mathf.Max(0, (newTempScore - 500) / 25);
     }
+    private void MoveTempScoreToTotal()
+    {
+        Sequence sequence = DOTween.Sequence(this);
+
+        float transT = 0;
+        sequence.Append(
+            DOTween.To(() => transT, x => transT = x, tempScoreTranslateDist, tempScoreMoveUpTime).OnUpdate(() =>
+            {
+                tempScore.style.translate = new StyleTranslate(new Translate(0, transT));
+            }).SetEase(Ease.InBack));
+
+        float alphaT = 1f;
+        sequence.Insert(tempScoreFadeDelay,
+            DOTween.To(() => alphaT, x => alphaT = x, 0, tempScoreMoveUpTime - tempScoreFadeDelay).OnUpdate(() =>
+            {
+                tempScore.style.opacity = alphaT;
+            }));
+
+        sequence.AppendCallback(() =>
+        {
+            tempScore.style.display = DisplayStyle.None;
+            tempScore.style.opacity = 1f;
+            tempScore.style.translate = new StyleTranslate(new Translate(0, 0));
+        });
+
+    }
+    public void DropTempScore()
+    {
+        Sequence sequence = DOTween.Sequence(this);
+
+        float transT = 0;
+        sequence.Append(
+            DOTween.To(() => transT, x => transT = x, -tempScoreTranslateDist, tempScoreMoveUpTime).OnUpdate(() =>
+            {
+                tempScore.style.translate = new StyleTranslate(new Translate(0, transT));
+            }).SetEase(Ease.InQuad));
+
+        float alphaT = 1f;
+        sequence.Insert(tempScoreFadeDelay,
+            DOTween.To(() => alphaT, x => alphaT = x, 0, tempScoreMoveUpTime - tempScoreFadeDelay).OnUpdate(() =>
+            {
+                tempScore.style.opacity = alphaT;
+            }));
+
+        float randRot = Random.Range(-tempScoreRandRotationSpread, tempScoreRandRotationSpread);
+        float rotT = 0;
+        sequence.Insert(0,
+            DOTween.To(() => rotT, x => rotT = x, randRot, tempScoreMoveUpTime).OnUpdate(() =>
+            {
+                tempScore.style.rotate = new StyleRotate(new Rotate(rotT));
+            }).SetEase(Ease.InQuad));
+
+        sequence.AppendCallback(() =>
+        {
+            tempScore.style.display = DisplayStyle.None;
+            tempScore.style.opacity = 1f;
+            tempScore.style.translate = new StyleTranslate(new Translate(0, 0));
+            tempScore.style.rotate = new StyleRotate(new Rotate(0));
+        });
+    }
+    private void TempScoreShake(int amplitude) //TODO:
+    {
+        if (seq_tempScoreShake != null && seq_tempScoreShake.IsPlaying())
+            seq_tempScoreShake.Complete();
+
+        if (amplitude == 0)
+            return;
+
+        seq_tempScoreShake = DOTween.Sequence(this);
+
+    }
+
 
     private void EndTurnClick (ClickEvent click)
     {

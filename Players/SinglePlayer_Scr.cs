@@ -750,9 +750,6 @@ public class SinglePlayer_Scr : MonoBehaviour
     #region UI Thingies
     private void UpdateTurnScore()
     {
-        if (turnScore + tempScore == 0)
-        { /*uiRefs.turnScore.text = ""*/; return; }
-
         uiManager.UpdateTempScore(turnScore + tempScore);
 
         //int textSize = 50 + Mathf.Max(0, (turnScore + tempScore - 500) / 200);
@@ -791,7 +788,9 @@ public class SinglePlayer_Scr : MonoBehaviour
         turnScore = 0;
         tempScore = 0;
 
-        Sequence sequence = DOTween.Sequence();
+        uiManager.DropTempScore();
+
+        //Sequence sequence = DOTween.Sequence();
         /*Vector3 textStartPos = uiRefs.turnScore.rectTransform.position;
 
         sequence.Append(uiRefs.turnScore.DOColor(Color.red, 0.3f));
@@ -832,6 +831,7 @@ public class SinglePlayer_Scr : MonoBehaviour
     {
         isMyTurn = false;
         uiManager.SetActiveTurnBtn(false);
+        //uiManager.SetActiveTempScore(false);
         //uiRefs.yourTurnSign.gameObject.SetActive(false);
         spGM.TurnPass();
     }

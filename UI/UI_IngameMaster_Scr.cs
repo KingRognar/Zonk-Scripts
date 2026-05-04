@@ -20,8 +20,8 @@ public class UI_IngameMaster_Scr : MonoBehaviour
 
     private void Awake()
     {
-        mainDoc.rootVisualElement.style.display = DisplayStyle.None;
-        rulesDoc.rootVisualElement.style.display = DisplayStyle.None;
+        /*//mainDoc.rootVisualElement.style.display = DisplayStyle.None;
+        //rulesDoc.rootVisualElement.style.display = DisplayStyle.None;
 
 
         mainBtns = mainDoc.rootVisualElement.Query<Button>().ToList();
@@ -33,7 +33,7 @@ public class UI_IngameMaster_Scr : MonoBehaviour
         mainBtns[4].RegisterCallback<ClickEvent>(ExitGameClick);// exit game
 
         rulesBackBtn = rulesDoc.rootVisualElement.Query<Button>("Back");
-        rulesBackBtn.RegisterCallback<ClickEvent>(RulesBackClick);
+        rulesBackBtn.RegisterCallback<ClickEvent>(RulesBackClick);*/
     }
     private void Update()
     {
