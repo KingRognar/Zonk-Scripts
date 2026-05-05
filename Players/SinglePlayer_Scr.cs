@@ -35,8 +35,8 @@ public class SinglePlayer_Scr : MonoBehaviour
     [SerializeField] private List<DiceMaterialSetSO_Scr> diceMaterialSets;
 
     //Score related
-    private int score = 0;
-    private int maxScore = 4000;
+    public int score = 0;
+    public int maxScore = 4000;
     private int turnScore = 0;
     private int tempScore = 0;
     public bool combosExist = false;
@@ -94,7 +94,7 @@ public class SinglePlayer_Scr : MonoBehaviour
         uiRefs.yourTurnSign.SetActive(true);*/
 
         uiManager = UI_Manager_Scr.instance;
-
+        uiManager.UpdateMaxScore(maxScore);
 
         //UpdateTurnScore();
         //UpdateScore();
@@ -769,7 +769,7 @@ public class SinglePlayer_Scr : MonoBehaviour
         tempScore = 0;
         Sequence sequence = DOTween.Sequence();
 
-        uiManager.UpdateScore(score, maxScore);
+        uiManager.UpdateScore(score);
 
         /*Vector3 textStartPos = uiRefs.turnScore.rectTransform.position;
 
@@ -807,9 +807,10 @@ public class SinglePlayer_Scr : MonoBehaviour
         if (!rerollAvailable)
             return;
 
-        EndTurn();
+
         ResetValues();
         AddTurnScore();
+        EndTurn();
     }
     #endregion
 

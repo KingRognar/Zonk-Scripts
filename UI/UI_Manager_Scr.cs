@@ -14,7 +14,7 @@ public class UI_Manager_Scr : MonoBehaviour
 
 
     private Label score, tempScore, maxScore;
-    private VisualElement yourTurn;
+    private Label yourTurn;
     public Button endTurnBtn;
     private Button menuBtn;
     private List<PlayerCard> playerCards = new List<PlayerCard>();
@@ -45,7 +45,7 @@ public class UI_Manager_Scr : MonoBehaviour
         menuBtn = doc.rootVisualElement.Q("Menu") as Button;
         menuBtn.RegisterCallback<ClickEvent>(MenuClick);
 
-        yourTurn = doc.rootVisualElement.Q("YourTurn");
+        yourTurn = doc.rootVisualElement.Q("YourTurn") as Label;
 
         score = doc.rootVisualElement.Q("Score") as Label;
         maxScore = doc.rootVisualElement.Q("MaxScore") as Label;
@@ -115,6 +115,11 @@ public class UI_Manager_Scr : MonoBehaviour
             yourTurn.style.display = DisplayStyle.None;
         });
     }
+    public void ChangeYourTurnToNewText(string newText)
+    {
+        yourTurn.text = newText;
+    }
+
 
     public void SetActiveTurnBtn(bool isActive)
     {
@@ -131,10 +136,14 @@ public class UI_Manager_Scr : MonoBehaviour
             tempScore.style.display = DisplayStyle.None;
     }
 
-    public void UpdateScore(int newScore, int newMaxScore)
+    public void UpdateMaxScore(int newMaxScore)
+    {
+        maxScore.text = newMaxScore.ToString();
+    }
+    public void UpdateScore(int newScore)
     {
         score.text = newScore.ToString();
-        maxScore.text = newMaxScore.ToString();
+        //TODO: сгладить так чтоб скор добавлялся когда темп падал на место
         MoveTempScoreToTotal();
     }
     public void UpdateTempScore(int newTempScore)
@@ -220,6 +229,24 @@ public class UI_Manager_Scr : MonoBehaviour
     }
 
 
+    public void UpdateCardFromSO(int cardId, BotData_SO data)
+    {
+        //TODO:
+
+        playerCards[cardId].SetName(data.name);
+
+    }
+    public void UpdateCardScore(int cardId, int newScore)
+    {
+        PlayerCard pCard = playerCards[cardId];
+
+        pCard.score.text = newScore.ToString();
+    }
+    public void UpdateCardMaxScore(int cardId, int newMaxScore)
+    {
+        playerCards[cardId].SetMaxScore(newMaxScore);
+    }
+
     private void EndTurnClick (ClickEvent click)
     {
         //TODO: 
@@ -236,7 +263,8 @@ public class UI_Manager_Scr : MonoBehaviour
         private VisualElement portrait;
         private VisualElement redDot;
         private Label name;
-        private VisualElement score;
+        public Label score;
+        public Label maxScore;
 
 
         public PlayerCard(VisualElement cardRoot)
@@ -246,6 +274,7 @@ public class UI_Manager_Scr : MonoBehaviour
             redDot = cardRoot.Q("RedDot");
             name = cardRoot.Q("Name") as Label;
             score = cardRoot.Q("Score") as Label;
+            maxScore = cardRoot.Q("MaxScore") as Label;
         }
 
         public void SetPortraitName(string newName, Texture2D newPortrait)
@@ -270,6 +299,11 @@ public class UI_Manager_Scr : MonoBehaviour
                 root.style.display = DisplayStyle.Flex;
             else
                 root.style.display = DisplayStyle.None;
+        }
+        public void SetMaxScore(int newMaxScore)
+        {
+            maxScore.text = newMaxScore.ToString();
+            //TODO: нужны ли настолько мелкие методы????
         }
     }
 

@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using DG.Tweening;
 using Unity.Netcode;
-using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 using UnityEngine.Animations.Rigging;
 using static Extensions_Scr;
@@ -16,6 +15,7 @@ public class BotPlayer_Scr : MonoBehaviour
     [SerializeField] public List<BotDice_Scr> diceSet = new();
     [SerializeField] private Hands_Scr hands;
     [HideInInspector] public SPGameManager_Scr spGM;
+    [HideInInspector] public BotData_SO data;
 
     //Dice selection
     private List<BotDice_Scr> diceSelected = new(), diceToRoll = new();
@@ -30,14 +30,15 @@ public class BotPlayer_Scr : MonoBehaviour
     [SerializeField] private List<DiceMaterialSetSO_Scr> diceMaterialSets;
 
     //Score related
-    private int score = 0;
-    private int maxScore = 4000;
+    public int score = 0;
+    public int maxScore = 4000;
     private int turnScore = 0;
     private int tempScore = 0;
     public bool combosExist = false;
     public bool rerollAvailable = true;
     private bool all6 = false;
 
+    public int botId = -1;
     public bool isMyTurn = false;
 
     [HideInInspector] public bool startAnimWithRightHand = true;
@@ -52,6 +53,8 @@ public class BotPlayer_Scr : MonoBehaviour
     Dictionary<ulong, NetworkObject> netObjects;
 
     bool isShowingGest = false;
+
+    UI_Manager_Scr uiManager;
     #endregion
 
     #region Init
@@ -65,6 +68,14 @@ public class BotPlayer_Scr : MonoBehaviour
     protected void SetupUI()
     {
         //TODO:
+        // - set max score
+        // - set portrait
+        // - 
+
+
+        uiManager = UI_Manager_Scr.instance;
+        uiManager.UpdateCardFromSO(botId, data);
+        uiManager.UpdateCardMaxScore(botId, maxScore);
     }
     protected void SetInitialPositions()
     {
@@ -98,6 +109,8 @@ public class BotPlayer_Scr : MonoBehaviour
     #region Bot Logic
     private void MakeTurn()
     {
+        turnScore += tempScore;
+        tempScore = 0;
         Debug.Log(gameObject.name + " делает ход");
 
         Sequence sequence = DOTween.Sequence(this);
@@ -612,7 +625,7 @@ public class BotPlayer_Scr : MonoBehaviour
                 MakeTurn();
             }
             else
-                EndTurn();
+                AddScoreAndEndTurn();
         }
 
 
@@ -907,10 +920,16 @@ public class BotPlayer_Scr : MonoBehaviour
     #endregion
 
     #region TBS
+    private void ResetTempNTurnScores()
+    {
+        tempScore = 0;
+        turnScore = 0;
+    }
     public void StartTurn()
     {
         isMyTurn = true;
         ResetAllDices();
+        ResetTempNTurnScores();
         MakeTurn();
         //uiRefs.yourTurnSign.gameObject.SetActive(true);
         //TODO: мб сделать надпись чей ход?
@@ -920,6 +939,13 @@ public class BotPlayer_Scr : MonoBehaviour
         EndTurn();
         ResetValues();
         //DropScore();
+    }
+    private void AddScoreAndEndTurn()
+    {
+        score += tempScore + turnScore;
+        uiManager.UpdateCardScore(botId, score);
+
+        EndTurn();
     }
     private void EndTurn()
     {
