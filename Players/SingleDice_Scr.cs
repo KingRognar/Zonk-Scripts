@@ -12,7 +12,8 @@ public class SingleDice_Scr : MonoBehaviour
 
     public bool isLeft = false, isActive = true;
 
-
+    Color yellowColor = new Color(0.9811321f, 0.8025317f, 0.02313991f, 1);
+    Color redColor = new Color(0.879f, 0.135f, 0.02313991f, 1);
 
     void Start()
     {
@@ -46,6 +47,14 @@ public class SingleDice_Scr : MonoBehaviour
         isActive = true;
         isLeft = false;
         outline.enabled = false;
+        ChangeOutlineColorToRed(false);
+    }
+    public void ChangeOutlineColorToRed(bool isRed)
+    {
+        if (isRed)
+            outline.OutlineColor = redColor;
+        else
+            outline.OutlineColor = yellowColor;
     }
 
     public int UpdateDiceValue()

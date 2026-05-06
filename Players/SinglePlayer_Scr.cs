@@ -525,6 +525,7 @@ public class SinglePlayer_Scr : MonoBehaviour
         CheckForFlashes(ref diceValues, diceCombos, true);
         CheckForDuplicates(ref diceValues, diceCombos, true);
         CheckCombosInSelected();
+        ChangeDiceColors(diceSelected);
         UpdateTurnScore();
     }
     private int[] GetDiceValues(List<SingleDice_Scr> dices)
@@ -731,6 +732,27 @@ public class SinglePlayer_Scr : MonoBehaviour
     public void OnDiceSelectChange()
     {
         CalculateSelectedDices();
+    }
+    private void ChangeDiceColors(List<SingleDice_Scr> diceSelected)
+    {
+        foreach (SingleDice_Scr die in diceSelected)
+            die.ChangeOutlineColorToRed(true);
+
+        List<SingleDice_Scr> changedColor = new List<SingleDice_Scr>();
+        foreach (int[] diceCombo in diceCombos)
+            for (int i = 0; i < 6; i++)
+            {
+                int j = diceCombo[i];
+                if (j == 0)
+                    continue;
+                foreach (SingleDice_Scr die in diceSelected)
+                    if (j > 0 && !changedColor.Contains(die) && die.value == i + 1)
+                    {
+                        die.ChangeOutlineColorToRed(false);
+                        changedColor.Add(die);
+                        j--;
+                    }
+            }
     }
     private void ResetValues()
     {
