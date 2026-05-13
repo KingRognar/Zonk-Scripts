@@ -7,6 +7,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using static Extensions_Scr;
 
+[DefaultExecutionOrder(-10)]
 public class SPGameManager_Scr : MonoBehaviour
 {
     public static SPGameManager_Scr instance;

@@ -39,7 +39,7 @@ public class SinglePlayer_Scr : MonoBehaviour
     public int maxScore = 4000;
     private int turnScore = 0;
     private int tempScore = 0;
-    public bool combosExist = false;
+    //public bool combosExist = false;
     public bool rerollAvailable = true;
     private bool all6 = false;
 
@@ -55,6 +55,8 @@ public class SinglePlayer_Scr : MonoBehaviour
     //private float displayRadius = 1.4f;
 
     bool isShowingGest = false;
+
+    [SerializeField] private ScoreCalculator_Scr scoreCalculator;
     #endregion
 
     void Start()
@@ -190,7 +192,7 @@ public class SinglePlayer_Scr : MonoBehaviour
     public void MoveDicesToCup()
     {
         turnScore += tempScore;
-        all6 = CheckAll6();
+        all6 = scoreCalculator.CheckAll6(GetDiceSelected(true), GetDiceActive(), rerollAvailable);
         if (firstRoll || all6)
         { diceToRoll = diceSet; firstRoll = false; }
         else
@@ -265,12 +267,15 @@ public class SinglePlayer_Scr : MonoBehaviour
             diceTrans.position = newPos;
         }
 
-        CheckCombosInActive();
+        //CheckCombosInActive();
+
+        bool combosExist = scoreCalculator.CheckCombosInActive(GetDiceActive());
         if (!combosExist)
             BreakStreakAndEndTurn();
     }
     private void MoveCombosToBack()
     {
+        diceCombos = scoreCalculator.diceCombos;
         for (int i = 0; i < diceCombos.Count; i++)
         {
             List<Transform> comboTransforms = GetDiceCombo(diceCombos[i]);
@@ -516,143 +521,143 @@ public class SinglePlayer_Scr : MonoBehaviour
     #endregion
 
     #region Score Calcs
-    private void CalculateSelectedDices()
-    {
-        tempScore = 0;
-        diceSelected = GetDiceSelected(true);
-        diceValues = GetDiceValues(diceSelected);
-        diceCombos = new List<int[]>();
-        CheckForFlashes(ref diceValues, diceCombos, true);
-        CheckForDuplicates(ref diceValues, diceCombos, true);
-        CheckCombosInSelected();
-        ChangeDiceColors(diceSelected);
-        UpdateTurnScore();
-    }
-    private int[] GetDiceValues(List<SingleDice_Scr> dices)
-    {
-        int[] values = new int[6] { 0, 0, 0, 0, 0, 0 };
-        for (int i = 0; i < dices.Count; i++)
-        {
-            values[dices[i].UpdateDiceValue() - 1]++;
-        }
-        return values;
-    }
-    private void CheckForFlashes(ref int[] values, List<int[]> combos, bool countScore)
-    {
-        int value = 0;
-        int k = 0;
-        bool firstFlash = false;
-        for (int i = 0; i < values.Length; i++)
-        {
-            if ((i >= 1 && i <= 4) && values[i] == 0)
-                return;
-            if (values[i] >= 1)
-                k++;
-            if (k + 2 < i)
-                return;
+    //private void CalculateSelectedDices()
+    //{
+    //    tempScore = 0;
+    //    diceSelected = GetDiceSelected(true);
+    //    diceValues = GetDiceValues(diceSelected);
+    //    diceCombos = new List<int[]>();
+    //    CheckForFlashes(ref diceValues, diceCombos, true);
+    //    CheckForDuplicates(ref diceValues, diceCombos, true);
+    //    CheckCombosInSelected();
+    //    ChangeDiceColors(diceSelected);
+    //    UpdateTurnScore();
+    //}
+    //private int[] GetDiceValues(List<SingleDice_Scr> dices)
+    //{
+    //    int[] values = new int[6] { 0, 0, 0, 0, 0, 0 };
+    //    for (int i = 0; i < dices.Count; i++)
+    //    {
+    //        values[dices[i].UpdateDiceValue() - 1]++;
+    //    }
+    //    return values;
+    //}
+    //private void CheckForFlashes(ref int[] values, List<int[]> combos, bool countScore)
+    //{
+    //    int value = 0;
+    //    int k = 0;
+    //    bool firstFlash = false;
+    //    for (int i = 0; i < values.Length; i++)
+    //    {
+    //        if ((i >= 1 && i <= 4) && values[i] == 0)
+    //            return;
+    //        if (values[i] >= 1)
+    //            k++;
+    //        if (k + 2 < i)
+    //            return;
 
-            if (k == 5 && i == 4)
-            {
-                value = 500;
-                int[] combo = new int[6] { 1, 1, 1, 1, 1, 0 };
-                combos.Add(combo);
-                values = values.SubtractArray(combo);
-                firstFlash = true;
-            }
-            if (k == 5 && i == 5 && !firstFlash)
-            {
-                value = 750;
-                int[] combo = new int[6] { 0, 1, 1, 1, 1, 1 };
-                combos.Add(combo);
-                values = values.SubtractArray(combo);
-            }
-            if (k == 6)
-            {
-                value = 1500;
-                int[] combo = new int[6] { 1, 1, 1, 1, 1, 1 };
-                combos.Add(combo);
-                values = values.SubtractArray(combo);
-            }
-        }
-        if (countScore)
-            tempScore += value;
-    }
-    private void CheckForDuplicates(ref int[] values, List<int[]> combos, bool countScore)
-    {
-        int value = 0;
-        for (int dice = 0; dice < values.Length; dice++)
-        {
-            int baseValue = GetDiceBaseScore(dice);
-            int temp = 0;
+    //        if (k == 5 && i == 4)
+    //        {
+    //            value = 500;
+    //            int[] combo = new int[6] { 1, 1, 1, 1, 1, 0 };
+    //            combos.Add(combo);
+    //            values = values.SubtractArray(combo);
+    //            firstFlash = true;
+    //        }
+    //        if (k == 5 && i == 5 && !firstFlash)
+    //        {
+    //            value = 750;
+    //            int[] combo = new int[6] { 0, 1, 1, 1, 1, 1 };
+    //            combos.Add(combo);
+    //            values = values.SubtractArray(combo);
+    //        }
+    //        if (k == 6)
+    //        {
+    //            value = 1500;
+    //            int[] combo = new int[6] { 1, 1, 1, 1, 1, 1 };
+    //            combos.Add(combo);
+    //            values = values.SubtractArray(combo);
+    //        }
+    //    }
+    //    if (countScore)
+    //        tempScore += value;
+    //}
+    //private void CheckForDuplicates(ref int[] values, List<int[]> combos, bool countScore)
+    //{
+    //    int value = 0;
+    //    for (int dice = 0; dice < values.Length; dice++)
+    //    {
+    //        int baseValue = GetDiceBaseScore(dice);
+    //        int temp = 0;
 
-            int dicesCount;
-            if (dice == 0 || dice == 4)
-                dicesCount = 1;
-            else
-                dicesCount = 3;
-            while (dicesCount <= 6)
-            {
-                if (values[dice] < dicesCount)
-                    break;
-                if (dicesCount <= 2)
-                    temp = dicesCount * baseValue * 10;
-                if (dicesCount == 3)
-                    temp = baseValue * 100;
-                if (dicesCount++ > 3)
-                    temp = temp * 2;
-            }
-            if (temp != 0)
-            {
-                int[] diceCombo = new int[] { 0, 0, 0, 0, 0, 0 };
-                diceCombo[dice] = values[dice];
-                values.SubtractArray(diceCombo);
-                combos.Add(diceCombo);
-            }
-            value += temp;
-        }
-        if (countScore)
-            tempScore += value;
-    }
-    private int GetDiceBaseScore(int num)
-    {
-        switch (num)
-        {
-            case 0: return 10;
-            case 1: return 2;
-            case 2: return 3;
-            case 3: return 4;
-            case 4: return 5;
-            case 5: return 6;
-            default: return 0;
-        }
-    }
-    private void CheckCombosInSelected()
-    {
-        int dicesNumInCombos = 0;
-        foreach (int[] diceCombo in diceCombos)
-            foreach (int dice in diceCombo)
-                dicesNumInCombos += dice;
+    //        int dicesCount;
+    //        if (dice == 0 || dice == 4)
+    //            dicesCount = 1;
+    //        else
+    //            dicesCount = 3;
+    //        while (dicesCount <= 6)
+    //        {
+    //            if (values[dice] < dicesCount)
+    //                break;
+    //            if (dicesCount <= 2)
+    //                temp = dicesCount * baseValue * 10;
+    //            if (dicesCount == 3)
+    //                temp = baseValue * 100;
+    //            if (dicesCount++ > 3)
+    //                temp = temp * 2;
+    //        }
+    //        if (temp != 0)
+    //        {
+    //            int[] diceCombo = new int[] { 0, 0, 0, 0, 0, 0 };
+    //            diceCombo[dice] = values[dice];
+    //            values.SubtractArray(diceCombo);
+    //            combos.Add(diceCombo);
+    //        }
+    //        value += temp;
+    //    }
+    //    if (countScore)
+    //        tempScore += value;
+    //}
+    //private int GetDiceBaseScore(int num)
+    //{
+    //    switch (num)
+    //    {
+    //        case 0: return 10;
+    //        case 1: return 2;
+    //        case 2: return 3;
+    //        case 3: return 4;
+    //        case 4: return 5;
+    //        case 5: return 6;
+    //        default: return 0;
+    //    }
+    //}
+    //private void CheckCombosInSelected()
+    //{
+    //    int dicesNumInCombos = 0;
+    //    foreach (int[] diceCombo in diceCombos)
+    //        foreach (int dice in diceCombo)
+    //            dicesNumInCombos += dice;
 
-        bool allDicesUsed = dicesNumInCombos == diceSelected.Count ? true : false;
-        rerollAvailable = (diceCombos.Count > 0 && allDicesUsed) ? true : false;
-    }
-    private void CheckCombosInActive()
-    {
-        List<SingleDice_Scr> activeDices = GetDiceActive();
-        int[] values = GetDiceValues(activeDices);
-        List<int[]> availableCombos = new List<int[]>();
-        CheckForFlashes(ref values, availableCombos, false);
-        CheckForDuplicates(ref values, availableCombos, false);
-        combosExist = availableCombos.Count > 0 ? true : false;
-    }
-    private bool CheckAll6() //TODO: мб надо где-то обнулять all6
-    {
-        if (diceSelected.Count != GetDiceActive().Count)
-            return false;
-        if (rerollAvailable)
-            return true;
-        return false;
-    }
+    //    bool allDicesUsed = dicesNumInCombos == diceSelected.Count ? true : false;
+    //    rerollAvailable = (diceCombos.Count > 0 && allDicesUsed) ? true : false;
+    //}
+    //private void CheckCombosInActive()
+    //{
+    //    List<SingleDice_Scr> activeDices = GetDiceActive();
+    //    int[] values = GetDiceValues(activeDices);
+    //    List<int[]> availableCombos = new List<int[]>();
+    //    CheckForFlashes(ref values, availableCombos, false);
+    //    CheckForDuplicates(ref values, availableCombos, false);
+    //    combosExist = availableCombos.Count > 0 ? true : false;
+    //}
+    //private bool CheckAll6() //TODO: мб надо где-то обнулять all6
+    //{
+    //    if (diceSelected.Count != GetDiceActive().Count)
+    //        return false;
+    //    if (rerollAvailable)
+    //        return true;
+    //    return false;
+    //}
     #endregion
 
     #region Dice Selection
@@ -706,7 +711,9 @@ public class SinglePlayer_Scr : MonoBehaviour
     {
         for (int i = 0; i < diceToRoll.Count; i++)
             RollDice(diceToRoll[i].transform);
-        CalculateSelectedDices();
+        //CalculateSelectedDices();
+        scoreCalculator.CalculateSelectedDices(GetDiceSelected(true));
+        rerollAvailable = scoreCalculator.rerollAvailable;
     }
     protected void RollDice(Transform diceTrans)
     {
@@ -731,29 +738,13 @@ public class SinglePlayer_Scr : MonoBehaviour
     }
     public void OnDiceSelectChange()
     {
-        CalculateSelectedDices();
+        diceSelected = GetDiceSelected(true);
+        tempScore = scoreCalculator.CalculateSelectedDices(diceSelected);
+        rerollAvailable = scoreCalculator.rerollAvailable;
+        //diceCombos = scoreCalculator.diceCombos;
+        UpdateTurnScore();
     }
-    private void ChangeDiceColors(List<SingleDice_Scr> diceSelected)
-    {
-        foreach (SingleDice_Scr die in diceSelected)
-            die.ChangeOutlineColorToRed(true);
 
-        List<SingleDice_Scr> changedColor = new List<SingleDice_Scr>();
-        foreach (int[] diceCombo in diceCombos)
-            for (int i = 0; i < 6; i++)
-            {
-                int j = diceCombo[i];
-                if (j == 0)
-                    continue;
-                foreach (SingleDice_Scr die in diceSelected)
-                    if (j > 0 && !changedColor.Contains(die) && die.value == i + 1)
-                    {
-                        die.ChangeOutlineColorToRed(false);
-                        changedColor.Add(die);
-                        j--;
-                    }
-            }
-    }
     private void ResetValues()
     {
         comboCount = 0;
